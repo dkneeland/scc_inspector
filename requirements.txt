@@ -1,0 +1,6 @@
+# No external dependencies required
+# This plugin uses only Python standard library
+# Notepad++ Python Script plugin provides the Npp module
+
+# Python Version: 2.7 or 3.x (bundled with Python Script plugin)
+# Tested with Python 2.7.18

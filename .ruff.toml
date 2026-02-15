@@ -1,0 +1,6 @@
+# Ruff configuration for Python 2.7 compatibility
+line-length = 200
+
+[format]
+# Preserve quotes and formatting
+quote-style = "preserve"
