@@ -157,30 +157,6 @@ def setup_indicators():
     editor.annotationSetVisible(ANNOTATIONVISIBLE.STANDARD)
 
 
-def highlight_single_line(line_num, line_text, timestamp_map=None):
-    """Apply error indicators and pair highlighting to a single line."""
-    line_start_pos = editor.positionFromLine(line_num)
-    length = len(line_text)
-
-    for indicator in (INDICATOR_ERROR, INDICATOR_PAIR, INDICATOR_PARITY):
-        editor.setIndicatorCurrent(indicator)
-        editor.indicatorClearRange(line_start_pos, length)
-
-    for start, end, error_type, _ in find_errors(line_text, line_num, timestamp_map):
-        if error_type == "parity_error":
-            editor.setIndicatorCurrent(INDICATOR_PARITY)
-        else:
-            editor.setIndicatorCurrent(INDICATOR_ERROR)
-        editor.indicatorFillRange(line_start_pos + start, end - start)
-
-    editor.setIndicatorCurrent(INDICATOR_PAIR)
-    seen_pairs = set()
-    for word in iter_hex_words(line_text):
-        if word.is_paired and word.pair_start not in seen_pairs:
-            editor.indicatorFillRange(line_start_pos + word.pair_start, word.pair_end - word.pair_start)
-            seen_pairs.add(word.pair_start)
-
-
 def build_time_map():
     """Single-pass state machine to map line numbers to start/end times.
 
@@ -648,11 +624,10 @@ def format_timestamp_description(hh, mm, ss, ff, word_idx, base_time):
 
 # Global map caches
 timestamp_map_cache = None
-time_map_cache = None
 
 def on_dwell_start(args):
     """Handle mouse hover to show tooltip with event info and buffer state."""
-    global timestamp_map_cache, time_map_cache
+    global timestamp_map_cache
     
     # Step 1: Validate file type
     filename = notepad.getCurrentFilename()
@@ -670,7 +645,7 @@ def on_dwell_start(args):
 
     # Step 3: Build maps if needed (lazy)
     if timestamp_map_cache is None:
-        time_map_cache, timestamp_map_cache, _ = build_time_map()
+        _, timestamp_map_cache, _ = build_time_map()
 
     # Step 4: Check for errors first
     if check_for_errors(line_text, col, line_start_pos, line_num, timestamp_map_cache):
@@ -723,7 +698,7 @@ def on_dwell_start(args):
 
 def on_buffer_activated(args):
     """Handle file activation - detect frame rate and apply indicators."""
-    global detected_frame_rate, timestamp_map_cache, time_map_cache
+    global detected_frame_rate, timestamp_map_cache
     filename = notepad.getCurrentFilename()
     if filename and filename.lower().endswith(".scc"):
         editor.setMouseDwellTime(300)
@@ -738,8 +713,7 @@ def on_buffer_activated(args):
             console.write("Detected Frame Rate: {0}\n".format(frame_rate))
             detected_frame_rate = frame_rate
 
-        timestamp_map_cache = None  # Clear caches on file load
-        time_map_cache = None
+        timestamp_map_cache = None  # Clear cache on file load
         setup_indicators()
         apply_all_indicators()
     else:
