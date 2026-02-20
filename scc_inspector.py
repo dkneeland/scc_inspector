@@ -106,6 +106,7 @@ STYLE_ANNOTATION = 20
 STYLE_ANNOTATION_ITALIC = 21
 STYLE_ANNOTATION_TIMING = 22
 STYLE_ANNOTATION_NEWLINE = 23
+STYLE_ANNOTATION_ERROR_SUMMARY = 25
 
 detected_frame_rate = None
 
@@ -133,6 +134,10 @@ def setup_indicators():
 
     editor.styleSetFore(STYLE_ANNOTATION_NEWLINE, (100, 100, 100))
     editor.styleSetBack(STYLE_ANNOTATION_NEWLINE, (30, 30, 30))
+
+    editor.styleSetFore(STYLE_ANNOTATION_ERROR_SUMMARY, (255, 100, 100))
+    editor.styleSetBack(STYLE_ANNOTATION_ERROR_SUMMARY, (60, 20, 20))
+    editor.styleSetBold(STYLE_ANNOTATION_ERROR_SUMMARY, True)
 
     editor.annotationSetVisible(ANNOTATIONVISIBLE.STANDARD)
 
@@ -277,6 +282,8 @@ def apply_annotation(line_num, segments, start_time=None, end_time=None):
 
         if style_info == "timing":
             style_id = STYLE_ANNOTATION_TIMING
+        elif style_info == "error_summary":
+            style_id = STYLE_ANNOTATION_ERROR_SUMMARY
         elif style_info == "newline":
             style_id = STYLE_ANNOTATION_NEWLINE
         elif style_info:
@@ -296,9 +303,24 @@ def apply_all_indicators():
     setup_indicators()
     total_lines = editor.getLineCount()
     time_map = build_time_map()
+    parity_count = 0
+    overflow_count = 0
+    error_timecodes = []
 
     for line_num in range(total_lines):
         text = editor.getLine(line_num)
+        errors = find_errors(text, line_num)
+        ts_match = TIMESTAMP_PATTERN.search(text)
+        has_error = False
+        for _, _, error_type in errors:
+            if error_type == "parity_error":
+                parity_count += 1
+                has_error = True
+            elif error_type == "cc_buffer_overflow":
+                overflow_count += 1
+                has_error = True
+        if has_error and ts_match:
+            error_timecodes.append(ts_match.group(0))
         highlight_single_line(line_num, text)
         if text.strip():
             segments = decode_full_line(text)
@@ -306,6 +328,20 @@ def apply_all_indicators():
                 times = time_map.get(line_num, (None, None))
                 start_time, end_time = times[0], times[1]
                 apply_annotation(line_num, segments, start_time, end_time)
+
+    if parity_count or overflow_count:
+        summary_parts = []
+        if parity_count:
+            summary_parts.append("{0} parity error{1}".format(parity_count, "s" if parity_count > 1 else ""))
+        if overflow_count:
+            summary_parts.append("{0} buffer overflow{1}".format(overflow_count, "s" if overflow_count > 1 else ""))
+        summary = "ERRORS: " + ", ".join(summary_parts)
+        if error_timecodes:
+            summary += "\nErrors at: " + ", ".join(error_timecodes)
+        summary_bytes = summary.encode("utf-8")
+        style_bytes = bytearray([STYLE_ANNOTATION_ERROR_SUMMARY] * len(summary_bytes))
+        editor.annotationSetText(0, summary_bytes)
+        editor.annotationSetStyles(0, bytes(style_bytes))
 
 
 def build_buffer_snapshot(line_text, target_word_idx, line_num=None):
