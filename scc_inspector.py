@@ -320,36 +320,75 @@ def apply_annotation(line_num, segments, start_time=None, end_time=None):
 
 
 def apply_all_indicators():
-    """Apply indicators and annotations to all lines in the file."""
+    """Apply indicators and annotations to all lines in the file (batched for performance)."""
     setup_indicators()
     total_lines = editor.getLineCount()
     time_map, timestamp_map = build_time_map()
+    
+    # Phase 1: Collect all ranges (pure Python, fast)
+    error_ranges = []
+    parity_ranges = []
+    pair_ranges = []
     parity_count = 0
     overflow_count = 0
     error_timecodes = []
-
+    
     for line_num in range(total_lines):
         text = editor.getLine(line_num)
+        if not text.strip():
+            continue
+        
+        line_start_pos = editor.positionFromLine(line_num)
+        
+        # Collect errors
         errors = find_errors(text, line_num, timestamp_map)
         ts_match = TIMESTAMP_PATTERN.search(text)
         has_error = False
-        for _, _, error_type, _ in errors:
+        for start, end, error_type, _ in errors:
             if error_type == "parity_error":
+                parity_ranges.append((line_start_pos + start, end - start))
                 parity_count += 1
                 has_error = True
-            elif error_type == "cc_buffer_overflow_tc":
-                overflow_count += 1
-                has_error = True
+            else:
+                error_ranges.append((line_start_pos + start, end - start))
+                if error_type == "cc_buffer_overflow_tc":
+                    overflow_count += 1
+                    has_error = True
         if has_error and ts_match:
             error_timecodes.append(ts_match.group(0))
-        highlight_single_line(line_num, text, timestamp_map)
-        if text.strip():
-            segments = decode_full_line(text)
-            if segments:
-                times = time_map.get(line_num, (None, None))
-                start_time, end_time = times[0], times[1]
-                apply_annotation(line_num, segments, start_time, end_time)
-
+        
+        # Collect pairs
+        seen_pairs = set()
+        for word in iter_hex_words(text):
+            if word.is_paired and word.pair_start not in seen_pairs:
+                pair_ranges.append((line_start_pos + word.pair_start, word.pair_end - word.pair_start))
+                seen_pairs.add(word.pair_start)
+        
+        # Apply annotations
+        segments = decode_full_line(text)
+        if segments:
+            times = time_map.get(line_num, (None, None))
+            apply_annotation(line_num, segments, times[0], times[1])
+    
+    # Phase 2: Apply all indicators in batches (minimize API calls)
+    doc_length = editor.getLength()
+    for indicator in (INDICATOR_ERROR, INDICATOR_PAIR, INDICATOR_PARITY):
+        editor.setIndicatorCurrent(indicator)
+        editor.indicatorClearRange(0, doc_length)
+    
+    editor.setIndicatorCurrent(INDICATOR_ERROR)
+    for pos, length in error_ranges:
+        editor.indicatorFillRange(pos, length)
+    
+    editor.setIndicatorCurrent(INDICATOR_PARITY)
+    for pos, length in parity_ranges:
+        editor.indicatorFillRange(pos, length)
+    
+    editor.setIndicatorCurrent(INDICATOR_PAIR)
+    for pos, length in pair_ranges:
+        editor.indicatorFillRange(pos, length)
+    
+    # Error summary annotation
     if parity_count or overflow_count:
         summary_parts = []
         if parity_count:
