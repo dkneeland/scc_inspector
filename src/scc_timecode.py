@@ -110,3 +110,26 @@ def compare_timestamps(ts1_str, ts2_str):
         return 0
     except (ValueError, IndexError, AttributeError, TypeError):
         return 0
+
+
+def packet_difference(ts1_str, ts2_str, frame_rate_str):
+    """Calculate packet difference between two timestamps (ts1 - ts2) using add_frames logic."""
+    try:
+        if compare_timestamps(ts1_str, ts2_str) < 0:
+            return 0
+        
+        ts2 = parse_timestamp_str(ts2_str)
+        
+        # Binary search to find how many packets from ts2 reach or exceed ts1
+        low, high = 0, 10000
+        while low < high:
+            mid = (low + high + 1) // 2
+            result_ts, _ = add_frames(ts2.hours, ts2.minutes, ts2.seconds, ts2.frames, mid, frame_rate_str)
+            if compare_timestamps(result_ts, ts1_str) >= 0:
+                high = mid - 1
+            else:
+                low = mid
+        
+        return low + 1
+    except (ValueError, IndexError, AttributeError, TypeError):
+        return 0

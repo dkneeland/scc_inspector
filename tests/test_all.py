@@ -470,7 +470,7 @@ def test_parity_error_position():
     parity_errors = [e for e in errors if e[2] == "parity_error"]
     if len(parity_errors) != 1:
         return False
-    start, end, _ = parity_errors[0]
+    start, end, _, _ = parity_errors[0]
     return line[start:end] == "9520"
 
 

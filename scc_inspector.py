@@ -23,6 +23,7 @@ from scc_timecode import (
     detect_frame_rate,
     validate_timestamp,
     compare_timestamps,
+    packet_difference,
 )
 from scc_buffer_format import render_line_annotation
 
@@ -56,16 +57,18 @@ def check_parity_fast(hex_str):
 
 
 def estimate_overflow_fast(ts_str, next_ts_str, packet_count, frame_rate):
-    """Fast overflow estimate using max packet time."""
+    """Fast overflow estimate using max packet time. Returns (is_overflow, packet_overflow_count)."""
     try:
         ts = parse_timestamp_str(ts_str)
-        # Calculate time of last packet
         last_pkt_time, _ = add_frames(
             ts.hours, ts.minutes, ts.seconds, ts.frames, packet_count - 1, frame_rate
         )
-        return compare_timestamps(last_pkt_time, next_ts_str) >= 0
+        if compare_timestamps(last_pkt_time, next_ts_str) >= 0:
+            diff = packet_difference(last_pkt_time, next_ts_str, frame_rate) + 1
+            return True, diff
+        return False, 0
     except (ValueError, TypeError):
-        return False
+        return False, 0
 
 
 def find_errors(line_text, line_num=None):
@@ -75,31 +78,37 @@ def find_errors(line_text, line_num=None):
     ts_match = TIMESTAMP_PATTERN.search(line_text)
     if ts_match:
         if not validate_timestamp(ts_match.group(0)):
-            errors.append((ts_match.start(), ts_match.end(), "invalid_timestamp"))
+            errors.append((ts_match.start(), ts_match.end(), "invalid_timestamp", None))
         
-        # Fast overflow check: count packets, check only last one
         if line_num is not None and detected_frame_rate:
             next_line = line_num + 2
             if next_line < editor.getLineCount():
                 next_text = editor.getLine(next_line)
                 next_match = TIMESTAMP_PATTERN.search(next_text)
                 if next_match:
-                    # Count packets
-                    packet_count = sum(
-                        1 for w in iter_hex_words(line_text)
-                        if not (w.is_paired and w.start > w.pair_start)
+                    is_overflow, overflow_count = estimate_overflow_fast(
+                        ts_match.group(0), next_match.group(0), 
+                        sum(1 for w in iter_hex_words(line_text) if not (w.is_paired and w.start > w.pair_start)),
+                        detected_frame_rate
                     )
                     
-                    if packet_count > 0 and estimate_overflow_fast(
-                        ts_match.group(0), next_match.group(0), packet_count, detected_frame_rate
-                    ):
-                        # Mark only timestamp as overflow (not individual packets)
-                        errors.append((ts_match.start(), ts_match.end(), "cc_buffer_overflow"))
+                    if is_overflow:
+                        # Mark timestamp for overflow message
+                        errors.append((ts_match.start(), ts_match.end(), "cc_buffer_overflow_tc", overflow_count))
+                        
+                        # Mark the overflowing packets with red squiggles
+                        packet_idx = 0
+                        total_packets = sum(1 for w in iter_hex_words(line_text) if not (w.is_paired and w.start > w.pair_start))
+                        for word in iter_hex_words(line_text):
+                            if word.is_paired and word.start > word.pair_start:
+                                continue
+                            if packet_idx >= total_packets - overflow_count:
+                                errors.append((word.pair_start, word.pair_end, "cc_buffer_overflow_packet", overflow_count))
+                            packet_idx += 1
     
-    # Fast parity check without full decode
     for word in iter_hex_words(line_text):
         if not check_parity_fast(word.text):
-            errors.append((word.start, word.end, "parity_error"))
+            errors.append((word.start, word.end, "parity_error", None))
 
     return errors
 
@@ -156,7 +165,7 @@ def highlight_single_line(line_num, line_text):
         editor.setIndicatorCurrent(indicator)
         editor.indicatorClearRange(line_start_pos, length)
 
-    for start, end, error_type in find_errors(line_text, line_num):
+    for start, end, error_type, _ in find_errors(line_text, line_num):
         if error_type == "parity_error":
             editor.setIndicatorCurrent(INDICATOR_PARITY)
         else:
@@ -317,11 +326,11 @@ def apply_all_indicators():
         errors = find_errors(text, line_num)
         ts_match = TIMESTAMP_PATTERN.search(text)
         has_error = False
-        for _, _, error_type in errors:
+        for _, _, error_type, _ in errors:
             if error_type == "parity_error":
                 parity_count += 1
                 has_error = True
-            elif error_type == "cc_buffer_overflow":
+            elif error_type == "cc_buffer_overflow_tc":
                 overflow_count += 1
                 has_error = True
         if has_error and ts_match:
@@ -491,17 +500,18 @@ def build_buffer_snapshot(line_text, target_word_idx, line_num=None):
 def check_for_errors(line_text, col, line_start_pos, line_num):
     """Check if cursor is over an error and show error tooltip if so."""
     errors = find_errors(line_text, line_num)
-    for start, end, error_type in errors:
+    for start, end, error_type, extra_data in errors:
         if start <= col < end:
             if error_type == "parity_error":
                 editor.callTipShow(line_start_pos + start, "Invalid SCC code (parity check failed)")
                 return True
-            elif error_type == "cc_buffer_overflow":
-                editor.callTipShow(
-                    line_start_pos + start,
-                    "CC BUFFER OVERFLOW: Packets extend past next timestamp",
-                )
+            elif error_type == "cc_buffer_overflow_tc":
+                msg = "CC BUFFER OVERFLOW: {0} packets past next timestamp".format(extra_data)
+                editor.callTipShow(line_start_pos + start, msg)
                 return True
+            elif error_type == "cc_buffer_overflow_packet":
+                # Don't show tooltip for overflow packets - let normal tooltip show
+                return False
             elif error_type == "invalid_timestamp":
                 editor.callTipShow(line_start_pos + start, "Invalid timestamp")
                 return True
@@ -605,12 +615,27 @@ def on_dwell_start(args):
     # Step 6: Decode event
     evt = parse_scc_code(word.text, word.is_paired)
 
-    # Step 7: Format tooltip components
+    # Step 7: Check if this packet is in overflow
+    overflow_info = None
+    if detected_frame_rate:
+        next_line = line_num + 2
+        if next_line < editor.getLineCount():
+            next_text = editor.getLine(next_line)
+            next_match = TIMESTAMP_PATTERN.search(next_text)
+            if next_match:
+                total_packets = sum(1 for w in iter_hex_words(line_text) if not (w.is_paired and w.start > w.pair_start))
+                is_overflow, overflow_count = estimate_overflow_fast(
+                    base_time, next_match.group(0), total_packets, detected_frame_rate
+                )
+                if is_overflow and word_idx >= total_packets - overflow_count:
+                    overflow_info = (True, overflow_count)
+
+    # Step 8: Format tooltip components
     event_desc = format_event_description(evt, word.text)
     timestamp_desc = format_timestamp_description(ts.hours, ts.minutes, ts.seconds, ts.frames, word_idx, base_time)
     buffer_text, hl_start, hl_end = build_buffer_snapshot(line_text, word_idx, line_num)
 
-    # Step 8: Generate and show tooltip
+    # Step 9: Generate and show tooltip
     tooltip = format_tooltip(
         event_desc,
         timestamp_desc,
@@ -618,6 +643,7 @@ def on_dwell_start(args):
         hl_start,
         hl_end,
         evt["type"] in ("CONTROL", "NULL"),
+        overflow_info,
     )
     editor.callTipShow(anchor_pos, tooltip.encode("utf-8"))
 
