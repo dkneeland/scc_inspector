@@ -56,21 +56,6 @@ def check_parity_fast(hex_str):
         return False
 
 
-def build_timestamp_map():
-    """Build map of line numbers to (timestamp, packet_count) in single pass."""
-    timestamp_map = {}
-    total_lines = editor.getLineCount()
-    
-    for line_num in range(total_lines):
-        line_text = editor.getLine(line_num)
-        ts_match = TIMESTAMP_PATTERN.search(line_text)
-        if ts_match:
-            packet_count = sum(1 for w in iter_hex_words(line_text) if not (w.is_paired and w.start > w.pair_start))
-            timestamp_map[line_num] = (ts_match.group(0), packet_count)
-    
-    return timestamp_map
-
-
 def check_overflow_from_map(line_num, timestamp_map, frame_rate):
     """Check overflow using pre-built timestamp map. Returns (is_overflow, packet_overflow_count)."""
     if line_num not in timestamp_map or not frame_rate:
@@ -199,10 +184,13 @@ def highlight_single_line(line_num, line_text, timestamp_map=None):
 def build_time_map():
     """Single-pass state machine to map line numbers to start/end times.
 
-    Returns: dict { line_num: (start_time, end_time) }
+    Returns: (time_map, timestamp_map)
+        time_map: dict { line_num: [start_time, end_time] }
+        timestamp_map: dict { line_num: (timestamp_str, packet_count) }
     """
     total_lines = editor.getLineCount()
     line_map = {}
+    timestamp_map = {}
     pending_lines = []
     active_lines = []
 
@@ -278,7 +266,10 @@ def build_time_map():
 
             word_idx += 1
 
-    return line_map
+        # Collect timestamp info for overflow detection (piggyback on this loop)
+        timestamp_map[line_num] = (base_ts, word_idx)
+
+    return line_map, timestamp_map
 
 
 def apply_annotation(line_num, segments, start_time=None, end_time=None):
@@ -332,8 +323,7 @@ def apply_all_indicators():
     """Apply indicators and annotations to all lines in the file."""
     setup_indicators()
     total_lines = editor.getLineCount()
-    timestamp_map = build_timestamp_map()
-    time_map = build_time_map()
+    time_map, timestamp_map = build_time_map()
     parity_count = 0
     overflow_count = 0
     error_timecodes = []
@@ -593,12 +583,13 @@ def format_timestamp_description(hh, mm, ss, ff, word_idx, base_time):
     return "TIME: %s (+%d)" % (base_time, word_idx)
 
 
-# Global timestamp map cache
+# Global map caches
 timestamp_map_cache = None
+time_map_cache = None
 
 def on_dwell_start(args):
     """Handle mouse hover to show tooltip with event info and buffer state."""
-    global timestamp_map_cache
+    global timestamp_map_cache, time_map_cache
     
     # Step 1: Validate file type
     filename = notepad.getCurrentFilename()
@@ -614,9 +605,9 @@ def on_dwell_start(args):
     line_start_pos = editor.positionFromLine(line_num)
     col = pos - line_start_pos
 
-    # Step 3: Build timestamp map if needed (lazy)
+    # Step 3: Build maps if needed (lazy)
     if timestamp_map_cache is None:
-        timestamp_map_cache = build_timestamp_map()
+        time_map_cache, timestamp_map_cache = build_time_map()
 
     # Step 4: Check for errors first
     if check_for_errors(line_text, col, line_start_pos, line_num, timestamp_map_cache):
@@ -669,7 +660,7 @@ def on_dwell_start(args):
 
 def on_buffer_activated(args):
     """Handle file activation - detect frame rate and apply indicators."""
-    global detected_frame_rate, timestamp_map_cache
+    global detected_frame_rate, timestamp_map_cache, time_map_cache
     filename = notepad.getCurrentFilename()
     if filename and filename.lower().endswith(".scc"):
         editor.setMouseDwellTime(300)
@@ -684,7 +675,8 @@ def on_buffer_activated(args):
             console.write("Detected Frame Rate: {0}\n".format(frame_rate))
             detected_frame_rate = frame_rate
 
-        timestamp_map_cache = None  # Clear cache on file load
+        timestamp_map_cache = None  # Clear caches on file load
+        time_map_cache = None
         setup_indicators()
         apply_all_indicators()
     else:

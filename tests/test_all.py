@@ -383,7 +383,7 @@ def test_frame_rate_detection(name, file_content, expected_rate):
 def test_event_times(name, lines, start_line, frame_rate, expected_start, expected_end):
     editor.lines = lines
     scc_inspector.detected_frame_rate = frame_rate
-    time_map = build_time_map()
+    time_map, _ = build_time_map()
     times = time_map.get(start_line, (None, None))
     start, end = times[0], times[1]
     if start == expected_start and end == expected_end:
