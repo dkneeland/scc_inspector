@@ -29,10 +29,43 @@ from scc_buffer_format import render_line_annotation
 # Configuration
 MAX_SCAN_DEPTH = 1000  # Max lines to scan backwards for buffer state (prevents UI freeze)
 
+# Static parity lookup table - bytes with odd parity (128 valid bytes out of 256)
+VALID_BYTES = frozenset([
+    1, 2, 4, 7, 8, 11, 13, 14, 16, 19, 21, 22, 25, 26, 28, 31, 32, 35, 37, 38, 41, 42, 44, 47,
+    49, 50, 52, 55, 56, 59, 61, 62, 64, 67, 69, 70, 73, 74, 76, 79, 81, 82, 84, 87, 88, 91, 93,
+    94, 97, 98, 100, 103, 104, 107, 109, 110, 112, 115, 117, 118, 121, 122, 124, 127, 128, 131,
+    133, 134, 137, 138, 140, 143, 145, 146, 148, 151, 152, 155, 157, 158, 161, 162, 164, 167,
+    168, 171, 173, 174, 176, 179, 181, 182, 185, 186, 188, 191, 193, 194, 196, 199, 200, 203,
+    205, 206, 208, 211, 213, 214, 217, 218, 220, 223, 224, 227, 229, 230, 233, 234, 236, 239,
+    241, 242, 244, 247, 248, 251, 253, 254
+])
+
 
 def decode_full_line(line_text):
     """Decode a full SCC line and return rendered caption segments (fast single-pass)."""
     return render_line_annotation(line_text)
+
+
+def check_parity_fast(hex_str):
+    """Fast parity check using precomputed lookup table."""
+    try:
+        val = int(hex_str, 16)
+        return ((val >> 8) in VALID_BYTES) and ((val & 0xFF) in VALID_BYTES)
+    except (ValueError, TypeError):
+        return False
+
+
+def estimate_overflow_fast(ts_str, next_ts_str, packet_count, frame_rate):
+    """Fast overflow estimate using max packet time."""
+    try:
+        ts = parse_timestamp_str(ts_str)
+        # Calculate time of last packet
+        last_pkt_time, _ = add_frames(
+            ts.hours, ts.minutes, ts.seconds, ts.frames, packet_count - 1, frame_rate
+        )
+        return compare_timestamps(last_pkt_time, next_ts_str) >= 0
+    except (ValueError, TypeError):
+        return False
 
 
 def find_errors(line_text, line_num=None):
@@ -44,69 +77,29 @@ def find_errors(line_text, line_num=None):
         if not validate_timestamp(ts_match.group(0)):
             errors.append((ts_match.start(), ts_match.end(), "invalid_timestamp"))
         
-        # Check for CC buffer overflow only if we have frame rate
+        # Fast overflow check: count packets, check only last one
         if line_num is not None and detected_frame_rate:
-            try:
-                ts = parse_timestamp_str(ts_match.group(0))
-
-                # Find next timestamp (SCC format: timestamp, blank, timestamp, blank...)
-                next_ts_str = None
-                next_line = line_num + 2
-                if next_line < editor.getLineCount():
-                    next_text = editor.getLine(next_line)
-                    next_match = TIMESTAMP_PATTERN.search(next_text)
-                    if next_match:
-                        next_ts_str = next_match.group(0)
-
-                if next_ts_str:
-                    # Single pass: check parity, invalid hex, and overflow together
-                    packet_idx = 0
-                    overflow_found = False
-                    for word in iter_hex_words(line_text):
-                        if word.is_paired and word.start > word.pair_start:
-                            continue
-
-                        evt = parse_scc_code(word.text, word.is_paired)
-
-                        # Check parity/invalid hex
-                        if evt["type"] == "ERROR":
-                            if evt["desc"] == "Parity Error":
-                                errors.append((word.start, word.end, "parity_error"))
-                            else:
-                                errors.append((word.start, word.end, "invalid_hex"))
-                            continue  # Skip overflow check for invalid packets
-
-                        # Check overflow for valid packets only
-                        pkt_time, _ = add_frames(
-                            ts.hours,
-                            ts.minutes,
-                            ts.seconds,
-                            ts.frames,
-                            packet_idx,
-                            detected_frame_rate,
-                        )
-
-                        if compare_timestamps(pkt_time, next_ts_str) >= 0:
-                            errors.append((word.start, word.end, "cc_buffer_overflow"))
-                            overflow_found = True
-
-                        packet_idx += 1
-
-                    # Also mark timestamp if any overflow
-                    if overflow_found:
+            next_line = line_num + 2
+            if next_line < editor.getLineCount():
+                next_text = editor.getLine(next_line)
+                next_match = TIMESTAMP_PATTERN.search(next_text)
+                if next_match:
+                    # Count packets
+                    packet_count = sum(
+                        1 for w in iter_hex_words(line_text)
+                        if not (w.is_paired and w.start > w.pair_start)
+                    )
+                    
+                    if packet_count > 0 and estimate_overflow_fast(
+                        ts_match.group(0), next_match.group(0), packet_count, detected_frame_rate
+                    ):
+                        # Mark only timestamp as overflow (not individual packets)
                         errors.append((ts_match.start(), ts_match.end(), "cc_buffer_overflow"))
-                    return errors
-            except (ValueError, TypeError):
-                pass
     
-    # Always check parity/invalid hex for all lines (with or without timestamp)
+    # Fast parity check without full decode
     for word in iter_hex_words(line_text):
-        evt = parse_scc_code(word.text, word.is_paired)
-        if evt["type"] == "ERROR":
-            if evt["desc"] == "Parity Error":
-                errors.append((word.start, word.end, "parity_error"))
-            else:
-                errors.append((word.start, word.end, "invalid_hex"))
+        if not check_parity_fast(word.text):
+            errors.append((word.start, word.end, "parity_error"))
 
     return errors
 
@@ -501,17 +494,17 @@ def check_for_errors(line_text, col, line_start_pos, line_num):
     for start, end, error_type in errors:
         if start <= col < end:
             if error_type == "parity_error":
-                editor.callTipShow(line_start_pos + start, "PARITY ERROR: Odd parity check failed")
+                editor.callTipShow(line_start_pos + start, "Invalid SCC code (parity check failed)")
+                return True
             elif error_type == "cc_buffer_overflow":
                 editor.callTipShow(
                     line_start_pos + start,
                     "CC BUFFER OVERFLOW: Packets extend past next timestamp",
                 )
+                return True
             elif error_type == "invalid_timestamp":
                 editor.callTipShow(line_start_pos + start, "Invalid timestamp")
-            else:
-                editor.callTipShow(line_start_pos + start, "Invalid code")
-            return True
+                return True
     return False
 
 
