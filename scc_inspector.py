@@ -23,11 +23,23 @@ from scc_timecode import (
     detect_frame_rate,
     validate_timestamp,
     compare_timestamps,
+    packet_difference,
 )
 from scc_buffer_format import render_line_annotation
 
 # Configuration
 MAX_SCAN_DEPTH = 1000  # Max lines to scan backwards for buffer state (prevents UI freeze)
+
+# Static parity lookup table - bytes with odd parity (128 valid bytes out of 256)
+VALID_BYTES = frozenset([
+    1, 2, 4, 7, 8, 11, 13, 14, 16, 19, 21, 22, 25, 26, 28, 31, 32, 35, 37, 38, 41, 42, 44, 47,
+    49, 50, 52, 55, 56, 59, 61, 62, 64, 67, 69, 70, 73, 74, 76, 79, 81, 82, 84, 87, 88, 91, 93,
+    94, 97, 98, 100, 103, 104, 107, 109, 110, 112, 115, 117, 118, 121, 122, 124, 127, 128, 131,
+    133, 134, 137, 138, 140, 143, 145, 146, 148, 151, 152, 155, 157, 158, 161, 162, 164, 167,
+    168, 171, 173, 174, 176, 179, 181, 182, 185, 186, 188, 191, 193, 194, 196, 199, 200, 203,
+    205, 206, 208, 211, 213, 214, 217, 218, 220, 223, 224, 227, 229, 230, 233, 234, 236, 239,
+    241, 242, 244, 247, 248, 251, 253, 254
+])
 
 
 def decode_full_line(line_text):
@@ -35,66 +47,72 @@ def decode_full_line(line_text):
     return render_line_annotation(line_text)
 
 
-def find_errors(line_text, line_num=None):
+def check_parity_fast(hex_str):
+    """Fast parity check using precomputed lookup table."""
+    try:
+        val = int(hex_str, 16)
+        return ((val >> 8) in VALID_BYTES) and ((val & 0xFF) in VALID_BYTES)
+    except (ValueError, TypeError):
+        return False
+
+
+def check_overflow_from_map(line_num, timestamp_map, frame_rate):
+    """Check overflow using pre-built timestamp map. Returns (is_overflow, packet_overflow_count)."""
+    if line_num not in timestamp_map or not frame_rate:
+        return False, 0
+    
+    next_line = line_num + 2
+    if next_line not in timestamp_map:
+        return False, 0
+    
+    try:
+        ts_str, packet_count = timestamp_map[line_num]
+        next_ts_str, _ = timestamp_map[next_line]
+        
+        ts = parse_timestamp_str(ts_str)
+        last_pkt_time, _ = add_frames(
+            ts.hours, ts.minutes, ts.seconds, ts.frames, packet_count - 1, frame_rate
+        )
+        if compare_timestamps(last_pkt_time, next_ts_str) >= 0:
+            diff = packet_difference(last_pkt_time, next_ts_str, frame_rate) + 1
+            return True, diff
+        return False, 0
+    except (ValueError, TypeError):
+        return False, 0
+
+
+def find_errors(line_text, line_num=None, timestamp_map=None):
     """Find all errors in a line (invalid timestamps, parity errors, CC buffer overflow)."""
     errors = []
 
     ts_match = TIMESTAMP_PATTERN.search(line_text)
     if ts_match:
         if not validate_timestamp(ts_match.group(0)):
-            errors.append((ts_match.start(), ts_match.end(), "invalid_timestamp"))
-        elif line_num is not None and detected_frame_rate:
-            # Check for CC buffer overflow
+            errors.append((ts_match.start(), ts_match.end(), "invalid_timestamp", None))
+        
+        if line_num is not None and timestamp_map is not None:
             try:
-                ts = parse_timestamp_str(ts_match.group(0))
-
-                # Find next timestamp (limit scan depth)
-                next_ts_str = None
-                scan_limit = min(line_num + 100, editor.getLineCount())
-                for next_line in range(line_num + 1, scan_limit):
-                    next_text = editor.getLine(next_line)
-                    next_match = TIMESTAMP_PATTERN.search(next_text)
-                    if next_match:
-                        next_ts_str = next_match.group(0)
-                        break
-
-                if next_ts_str:
-                    # Check each packet to find overflow point
-                    packet_idx = 0
-                    overflow_found = False
-                    for word in iter_hex_words(line_text):
-                        if word.is_paired and word.start > word.pair_start:
-                            continue
-
-                        pkt_time, _ = add_frames(
-                            ts.hours,
-                            ts.minutes,
-                            ts.seconds,
-                            ts.frames,
-                            packet_idx,
-                            detected_frame_rate,
-                        )
-
-                        if compare_timestamps(pkt_time, next_ts_str) >= 0:
-                            # This packet and all following overflow
-                            errors.append((word.start, word.end, "cc_buffer_overflow"))
-                            overflow_found = True
-
-                        packet_idx += 1
-
-                    # Also mark timestamp if any overflow
-                    if overflow_found:
-                        errors.append((ts_match.start(), ts_match.end(), "cc_buffer_overflow"))
-            except (ValueError, TypeError):
-                pass
-
+                is_overflow, overflow_count = check_overflow_from_map(line_num, timestamp_map, detected_frame_rate)
+            except Exception:
+                is_overflow, overflow_count = False, 0
+            
+            if is_overflow:
+                # Mark timestamp for overflow message
+                errors.append((ts_match.start(), ts_match.end(), "cc_buffer_overflow_tc", overflow_count))
+                
+                # Mark the overflowing packets with red squiggles
+                packet_idx = 0
+                total_packets = sum(1 for w in iter_hex_words(line_text) if not (w.is_paired and w.start > w.pair_start))
+                for word in iter_hex_words(line_text):
+                    if word.is_paired and word.start > word.pair_start:
+                        continue
+                    if packet_idx >= total_packets - overflow_count:
+                        errors.append((word.pair_start, word.pair_end, "cc_buffer_overflow_packet", overflow_count))
+                    packet_idx += 1
+    
     for word in iter_hex_words(line_text):
-        evt = parse_scc_code(word.text, word.is_paired)
-        if evt["type"] == "ERROR":
-            if evt["desc"] == "Parity Error":
-                errors.append((word.start, word.end, "parity_error"))
-            else:
-                errors.append((word.start, word.end, "invalid_hex"))
+        if not check_parity_fast(word.text):
+            errors.append((word.start, word.end, "parity_error", None))
 
     return errors
 
@@ -106,6 +124,7 @@ STYLE_ANNOTATION = 20
 STYLE_ANNOTATION_ITALIC = 21
 STYLE_ANNOTATION_TIMING = 22
 STYLE_ANNOTATION_NEWLINE = 23
+STYLE_ANNOTATION_ERROR_SUMMARY = 25
 
 detected_frame_rate = None
 
@@ -134,47 +153,32 @@ def setup_indicators():
     editor.styleSetFore(STYLE_ANNOTATION_NEWLINE, (100, 100, 100))
     editor.styleSetBack(STYLE_ANNOTATION_NEWLINE, (30, 30, 30))
 
+    editor.styleSetFore(STYLE_ANNOTATION_ERROR_SUMMARY, (255, 100, 100))
+    editor.styleSetBack(STYLE_ANNOTATION_ERROR_SUMMARY, (60, 20, 20))
+    editor.styleSetBold(STYLE_ANNOTATION_ERROR_SUMMARY, True)
+
     editor.annotationSetVisible(ANNOTATIONVISIBLE.STANDARD)
-
-
-def highlight_single_line(line_num, line_text):
-    """Apply error indicators and pair highlighting to a single line."""
-    line_start_pos = editor.positionFromLine(line_num)
-    length = len(line_text)
-
-    for indicator in (INDICATOR_ERROR, INDICATOR_PAIR, INDICATOR_PARITY):
-        editor.setIndicatorCurrent(indicator)
-        editor.indicatorClearRange(line_start_pos, length)
-
-    for start, end, error_type in find_errors(line_text, line_num):
-        if error_type == "parity_error":
-            editor.setIndicatorCurrent(INDICATOR_PARITY)
-        else:
-            editor.setIndicatorCurrent(INDICATOR_ERROR)
-        editor.indicatorFillRange(line_start_pos + start, end - start)
-
-    editor.setIndicatorCurrent(INDICATOR_PAIR)
-    seen_pairs = set()
-    for word in iter_hex_words(line_text):
-        if word.is_paired and word.pair_start not in seen_pairs:
-            editor.indicatorFillRange(line_start_pos + word.pair_start, word.pair_end - word.pair_start)
-            seen_pairs.add(word.pair_start)
 
 
 def build_time_map():
     """Single-pass state machine to map line numbers to start/end times.
 
-    Returns: dict { line_num: (start_time, end_time) }
+    Returns: (time_map, timestamp_map, line_texts)
+        time_map: dict { line_num: [start_time, end_time] }
+        timestamp_map: dict { line_num: (timestamp_str, packet_count) }
+        line_texts: dict { line_num: str } for all non-empty lines
     """
-    total_lines = editor.getLineCount()
+    all_lines = editor.getText().splitlines(True)
     line_map = {}
+    timestamp_map = {}
+    line_texts = {}
     pending_lines = []
     active_lines = []
 
-    for line_num in range(total_lines):
-        line_text = editor.getLine(line_num)
-        if not line_text.strip():
+    for line_num, line_text in enumerate(all_lines):
+        if not line_text or line_text.isspace():
             continue
+        line_texts[line_num] = line_text
 
         ts_match = TIMESTAMP_PATTERN.search(line_text)
         if not ts_match:
@@ -199,14 +203,17 @@ def build_time_map():
                 has_added_pending = True
 
             if is_eoc(word.text):
-                start_time_str, _ = add_frames(
-                    ts.hours,
-                    ts.minutes,
-                    ts.seconds,
-                    ts.frames,
-                    word_idx,
-                    detected_frame_rate,
-                )
+                try:
+                    start_time_str, _ = add_frames(
+                        ts.hours,
+                        ts.minutes,
+                        ts.seconds,
+                        ts.frames,
+                        word_idx,
+                        detected_frame_rate,
+                    )
+                except (ValueError, TypeError):
+                    start_time_str = None
 
                 for a_line in active_lines:
                     if a_line in line_map:
@@ -222,14 +229,17 @@ def build_time_map():
                 has_added_pending = False
 
             elif is_edm(word.text):
-                end_time_str, _ = add_frames(
-                    ts.hours,
-                    ts.minutes,
-                    ts.seconds,
-                    ts.frames,
-                    word_idx,
-                    detected_frame_rate,
-                )
+                try:
+                    end_time_str, _ = add_frames(
+                        ts.hours,
+                        ts.minutes,
+                        ts.seconds,
+                        ts.frames,
+                        word_idx,
+                        detected_frame_rate,
+                    )
+                except (ValueError, TypeError):
+                    end_time_str = None
 
                 for a_line in active_lines:
                     if a_line in line_map:
@@ -243,7 +253,10 @@ def build_time_map():
 
             word_idx += 1
 
-    return line_map
+        # Collect timestamp info for overflow detection (piggyback on this loop)
+        timestamp_map[line_num] = (base_ts, word_idx)
+
+    return line_map, timestamp_map, line_texts
 
 
 def apply_annotation(line_num, segments, start_time=None, end_time=None):
@@ -277,6 +290,8 @@ def apply_annotation(line_num, segments, start_time=None, end_time=None):
 
         if style_info == "timing":
             style_id = STYLE_ANNOTATION_TIMING
+        elif style_info == "error_summary":
+            style_id = STYLE_ANNOTATION_ERROR_SUMMARY
         elif style_info == "newline":
             style_id = STYLE_ANNOTATION_NEWLINE
         elif style_info:
@@ -292,20 +307,97 @@ def apply_annotation(line_num, segments, start_time=None, end_time=None):
 
 
 def apply_all_indicators():
-    """Apply indicators and annotations to all lines in the file."""
+    """Apply indicators and annotations to all lines in the file (batched for performance)."""
     setup_indicators()
+    time_map, timestamp_map, line_texts = build_time_map()
+
+    # Phase 1: Collect all ranges (pure Python, fast)
+    error_ranges = []
+    parity_ranges = []
+    pair_ranges = []
+    parity_count = 0
+    overflow_count = 0
+    error_timecodes = []
+
     total_lines = editor.getLineCount()
-    time_map = build_time_map()
 
     for line_num in range(total_lines):
-        text = editor.getLine(line_num)
-        highlight_single_line(line_num, text)
-        if text.strip():
-            segments = decode_full_line(text)
-            if segments:
-                times = time_map.get(line_num, (None, None))
-                start_time, end_time = times[0], times[1]
-                apply_annotation(line_num, segments, start_time, end_time)
+        text = line_texts.get(line_num)
+        if text is None:
+            continue
+
+        line_start_pos = editor.positionFromLine(line_num)
+
+        # Single iter_hex_words pass: errors + pairs + annotation
+        ts_match = TIMESTAMP_PATTERN.search(text)
+        is_overflow, overflow_cnt = (
+            check_overflow_from_map(line_num, timestamp_map, detected_frame_rate)
+            if ts_match else (False, 0)
+        )
+
+        if ts_match and not validate_timestamp(ts_match.group(0)):
+            error_ranges.append((line_start_pos + ts_match.start(), ts_match.end() - ts_match.start()))
+            error_timecodes.append(ts_match.group(0))
+
+        if is_overflow:
+            error_ranges.append((line_start_pos + ts_match.start(), ts_match.end() - ts_match.start()))
+            overflow_count += 1
+            error_timecodes.append(ts_match.group(0))
+
+        total_packets = sum(1 for w in iter_hex_words(text) if not (w.is_paired and w.start > w.pair_start))
+        seen_pairs = set()
+        packet_idx = 0
+
+        for word in iter_hex_words(text):
+            is_second = word.is_paired and word.start > word.pair_start
+            if not is_second:
+                if not check_parity_fast(word.text):
+                    parity_ranges.append((line_start_pos + word.start, word.end - word.start))
+                    parity_count += 1
+                if is_overflow and packet_idx >= total_packets - overflow_cnt:
+                    error_ranges.append((line_start_pos + word.pair_start, word.pair_end - word.pair_start))
+                packet_idx += 1
+            if word.is_paired and word.pair_start not in seen_pairs:
+                pair_ranges.append((line_start_pos + word.pair_start, word.pair_end - word.pair_start))
+                seen_pairs.add(word.pair_start)
+
+        segments = decode_full_line(text)
+        if segments:
+            times = time_map.get(line_num, (None, None))
+            apply_annotation(line_num, segments, times[0], times[1])
+
+    # Phase 2: Apply all indicators in batches (minimize API calls)
+    doc_length = editor.getLength()
+    for indicator in (INDICATOR_ERROR, INDICATOR_PAIR, INDICATOR_PARITY):
+        editor.setIndicatorCurrent(indicator)
+        editor.indicatorClearRange(0, doc_length)
+    
+    editor.setIndicatorCurrent(INDICATOR_ERROR)
+    for pos, length in error_ranges:
+        editor.indicatorFillRange(pos, length)
+    
+    editor.setIndicatorCurrent(INDICATOR_PARITY)
+    for pos, length in parity_ranges:
+        editor.indicatorFillRange(pos, length)
+    
+    editor.setIndicatorCurrent(INDICATOR_PAIR)
+    for pos, length in pair_ranges:
+        editor.indicatorFillRange(pos, length)
+    
+    # Error summary annotation
+    if parity_count or overflow_count:
+        summary_parts = []
+        if parity_count:
+            summary_parts.append("{0} parity error{1}".format(parity_count, "s" if parity_count > 1 else ""))
+        if overflow_count:
+            summary_parts.append("{0} buffer overflow{1}".format(overflow_count, "s" if overflow_count > 1 else ""))
+        summary = "ERRORS: " + ", ".join(summary_parts)
+        if error_timecodes:
+            summary += "\nErrors at: " + ", ".join(error_timecodes)
+        summary_bytes = summary.encode("utf-8")
+        style_bytes = bytearray([STYLE_ANNOTATION_ERROR_SUMMARY] * len(summary_bytes))
+        editor.annotationSetText(0, summary_bytes)
+        editor.annotationSetStyles(0, bytes(style_bytes))
 
 
 def build_buffer_snapshot(line_text, target_word_idx, line_num=None):
@@ -324,7 +416,10 @@ def build_buffer_snapshot(line_text, target_word_idx, line_num=None):
         lines_to_process = []
         search_limit = max(-1, line_num - MAX_SCAN_DEPTH)
         for search_line in range(line_num - 1, search_limit, -1):
-            search_text = editor.getLine(search_line)
+            try:
+                search_text = editor.getLine(search_line)
+            except Exception:
+                break
             found_enm = False
 
             for word in iter_hex_words(search_text):
@@ -334,10 +429,11 @@ def build_buffer_snapshot(line_text, target_word_idx, line_num=None):
                     found_enm = True
                     break
 
-            lines_to_process.insert(0, search_text)
+            lines_to_process.append(search_text)
             if found_enm:
                 break
 
+        lines_to_process.reverse()
         for line_text_prev in lines_to_process:
             for word in iter_hex_words(line_text_prev):
                 if word.is_paired and word.start > word.pair_start:
@@ -447,23 +543,24 @@ def build_buffer_snapshot(line_text, target_word_idx, line_num=None):
     return result, -1, -1
 
 
-def check_for_errors(line_text, col, line_start_pos, line_num):
+def check_for_errors(line_text, col, line_start_pos, line_num, timestamp_map):
     """Check if cursor is over an error and show error tooltip if so."""
-    errors = find_errors(line_text, line_num)
-    for start, end, error_type in errors:
+    errors = find_errors(line_text, line_num, timestamp_map)
+    for start, end, error_type, extra_data in errors:
         if start <= col < end:
             if error_type == "parity_error":
-                editor.callTipShow(line_start_pos + start, "PARITY ERROR: Odd parity check failed")
-            elif error_type == "cc_buffer_overflow":
-                editor.callTipShow(
-                    line_start_pos + start,
-                    "CC BUFFER OVERFLOW: Packets extend past next timestamp",
-                )
+                editor.callTipShow(line_start_pos + start, "Invalid SCC code (parity check failed)")
+                return True
+            elif error_type == "cc_buffer_overflow_tc":
+                msg = "CC BUFFER OVERFLOW: {0} packets past next timestamp".format(extra_data)
+                editor.callTipShow(line_start_pos + start, msg)
+                return True
+            elif error_type == "cc_buffer_overflow_packet":
+                # Don't show tooltip for overflow packets - let normal tooltip show
+                return False
             elif error_type == "invalid_timestamp":
                 editor.callTipShow(line_start_pos + start, "Invalid timestamp")
-            else:
-                editor.callTipShow(line_start_pos + start, "Invalid code")
-            return True
+                return True
     return False
 
 
@@ -483,29 +580,30 @@ def format_event_description(evt, word_text):
     """Format the event description line for tooltip."""
     lbl = evt.get("label", "").strip()
     suffix = " (%s)" % lbl if lbl else ""
-    if evt["type"] == "TEXT":
-        return 'TEXT: "%s" (%s)' % (evt["text"], word_text)
-    elif evt["type"] == "PAC":
-        ul = " Und" if evt["underline"] else ""
+    evt_type = evt.get("type", "")
+    if evt_type == "TEXT":
+        return 'TEXT: "%s" (%s)' % (evt.get("text", ""), word_text)
+    elif evt_type == "PAC":
+        ul = " Und" if evt.get("underline", False) else ""
         return "PAC : Row %d, Col %d, %s%s (%s)%s" % (
-            evt["row"],
-            evt["col"],
-            evt["color"],
+            evt.get("row", 0),
+            evt.get("col", 0),
+            evt.get("color", ""),
             ul,
             word_text,
             suffix,
         )
-    elif evt["type"] == "MIDROW":
-        ul = " Und" if evt["underline"] else ""
-        return "CMD : Mid-Row: %s%s%s" % (evt["color"][:3], ul, suffix)
-    elif evt["type"] == "CONTROL":
+    elif evt_type == "MIDROW":
+        ul = " Und" if evt.get("underline", False) else ""
+        return "CMD : Mid-Row: %s%s%s" % (evt.get("color", "")[:3], ul, suffix)
+    elif evt_type == "CONTROL":
         return "CMD : %s (%s)%s" % (
-            evt["name"].split("(")[0].strip(),
+            evt.get("name", "Unknown").split("(")[0].strip(),
             word_text,
             suffix,
         )
-    elif evt["type"] == "INDENT":
-        n = evt["spaces"]
+    elif evt_type == "INDENT":
+        n = evt.get("spaces", 0)
         return "CMD : Indent %d %s (%s)%s" % (
             n,
             "space" if n == 1 else "spaces",
@@ -519,14 +617,23 @@ def format_event_description(evt, word_text):
 def format_timestamp_description(hh, mm, ss, ff, word_idx, base_time):
     """Format the timestamp description line for tooltip."""
     if detected_frame_rate:
-        pkt_time, _ = add_frames(hh, mm, ss, ff, word_idx, detected_frame_rate)
+        try:
+            pkt_time, _ = add_frames(hh, mm, ss, ff, word_idx, detected_frame_rate)
+        except (ValueError, TypeError):
+            return "TIME: %s (+%d)" % (base_time, word_idx)
         pkt_word = "packet" if word_idx == 1 else "packets"
         return "TIME: %s (+%d %s)" % (pkt_time, word_idx, pkt_word)
     return "TIME: %s (+%d)" % (base_time, word_idx)
 
 
+# Global map caches
+timestamp_map_cache = None
+line_texts_cache = None
+
 def on_dwell_start(args):
     """Handle mouse hover to show tooltip with event info and buffer state."""
+    global timestamp_map_cache, line_texts_cache
+    
     # Step 1: Validate file type
     filename = notepad.getCurrentFilename()
     if not filename or not filename.lower().endswith(".scc"):
@@ -537,15 +644,20 @@ def on_dwell_start(args):
 
     # Step 2: Get line and position info
     line_num = editor.lineFromPosition(pos)
-    line_text = editor.getLine(line_num)
     line_start_pos = editor.positionFromLine(line_num)
     col = pos - line_start_pos
 
-    # Step 3: Check for errors first
-    if check_for_errors(line_text, col, line_start_pos, line_num):
+    # Step 3: Build maps if needed (lazy)
+    if timestamp_map_cache is None:
+        _, timestamp_map_cache, line_texts_cache = build_time_map()
+
+    line_text = line_texts_cache.get(line_num) or editor.getLine(line_num)
+
+    # Step 4: Check for errors first
+    if check_for_errors(line_text, col, line_start_pos, line_num, timestamp_map_cache):
         return
 
-    # Step 4: Parse timestamp
+    # Step 5: Parse timestamp
     ts_match = TIMESTAMP_PATTERN.search(line_text)
     if not ts_match:
         return
@@ -556,20 +668,28 @@ def on_dwell_start(args):
     except (ValueError, TypeError):
         return
 
-    # Step 5: Find word under cursor
+    # Step 6: Find word under cursor
     word, word_idx = find_word_at_position(line_text, col)
     if word is None:
         return
 
-    # Step 6: Decode event
+    # Step 7: Decode event
     evt = parse_scc_code(word.text, word.is_paired)
 
-    # Step 7: Format tooltip components
+    # Step 8: Check if this packet is in overflow
+    overflow_info = None
+    is_overflow, overflow_count = check_overflow_from_map(line_num, timestamp_map_cache, detected_frame_rate)
+    if is_overflow:
+        total_packets = sum(1 for w in iter_hex_words(line_text) if not (w.is_paired and w.start > w.pair_start))
+        if word_idx >= total_packets - overflow_count:
+            overflow_info = (True, overflow_count)
+
+    # Step 9: Format tooltip components
     event_desc = format_event_description(evt, word.text)
     timestamp_desc = format_timestamp_description(ts.hours, ts.minutes, ts.seconds, ts.frames, word_idx, base_time)
     buffer_text, hl_start, hl_end = build_buffer_snapshot(line_text, word_idx, line_num)
 
-    # Step 8: Generate and show tooltip
+    # Step 10: Generate and show tooltip
     tooltip = format_tooltip(
         event_desc,
         timestamp_desc,
@@ -577,18 +697,23 @@ def on_dwell_start(args):
         hl_start,
         hl_end,
         evt["type"] in ("CONTROL", "NULL"),
+        overflow_info,
     )
     editor.callTipShow(anchor_pos, tooltip.encode("utf-8"))
 
 
 def on_buffer_activated(args):
     """Handle file activation - detect frame rate and apply indicators."""
-    global detected_frame_rate
+    global detected_frame_rate, timestamp_map_cache, line_texts_cache
     filename = notepad.getCurrentFilename()
     if filename and filename.lower().endswith(".scc"):
         editor.setMouseDwellTime(300)
 
-        file_text = editor.getText()
+        try:
+            file_text = editor.getText()
+        except Exception as e:
+            console.writeError("ERROR: Failed to read file: {0}\n".format(e))
+            return
         frame_rate, _ = detect_frame_rate(file_text)
 
         if frame_rate == "INVALID":
@@ -598,6 +723,8 @@ def on_buffer_activated(args):
             console.write("Detected Frame Rate: {0}\n".format(frame_rate))
             detected_frame_rate = frame_rate
 
+        timestamp_map_cache = None  # Clear cache on file load
+        line_texts_cache = None
         setup_indicators()
         apply_all_indicators()
     else:

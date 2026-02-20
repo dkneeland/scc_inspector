@@ -84,7 +84,7 @@ def wrap_tooltip_lines(text, markers, max_width=TOOLTIP_WIDTH):
     return lines
 
 
-def format_tooltip(event_desc, timestamp_desc, buffer_text, highlight_start, highlight_end, is_control):
+def format_tooltip(event_desc, timestamp_desc, buffer_text, highlight_start, highlight_end, is_control, overflow_info=None):
     """
     Format complete tooltip with event info, timestamp, and buffer state.
 
@@ -95,6 +95,7 @@ def format_tooltip(event_desc, timestamp_desc, buffer_text, highlight_start, hig
         highlight_start: Start position of highlight in buffer (-1 if none)
         highlight_end: End position of highlight in buffer (-1 if none)
         is_control: Whether this is a control command
+        overflow_info: Tuple of (is_overflow, overflow_count) or None
 
     Returns: Formatted tooltip string
     """
@@ -102,7 +103,12 @@ def format_tooltip(event_desc, timestamp_desc, buffer_text, highlight_start, hig
 
     full_buf, markers = format_buffer_with_markers(buffer_text, highlight_start, highlight_end, is_control)
     wrapped = wrap_tooltip_lines(full_buf, markers)
-    buffer_section = "\n".join(wrapped)
+    
+    if overflow_info and len(overflow_info) > 0 and overflow_info[0]:
+        overflow_msg = "!!! BUFFER OVERFLOW !!!"
+        buffer_section = overflow_msg + "\n" + "\n".join(wrapped)
+    else:
+        buffer_section = "\n".join(wrapped)
 
     return "%s\n%s\n%s\n%s\n%s" % (
         event_desc,
