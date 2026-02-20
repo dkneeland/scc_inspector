@@ -184,13 +184,15 @@ def highlight_single_line(line_num, line_text, timestamp_map=None):
 def build_time_map():
     """Single-pass state machine to map line numbers to start/end times.
 
-    Returns: (time_map, timestamp_map)
+    Returns: (time_map, timestamp_map, line_texts)
         time_map: dict { line_num: [start_time, end_time] }
         timestamp_map: dict { line_num: (timestamp_str, packet_count) }
+        line_texts: dict { line_num: str } for all non-empty lines
     """
     total_lines = editor.getLineCount()
     line_map = {}
     timestamp_map = {}
+    line_texts = {}
     pending_lines = []
     active_lines = []
 
@@ -198,6 +200,7 @@ def build_time_map():
         line_text = editor.getLine(line_num)
         if not line_text.strip():
             continue
+        line_texts[line_num] = line_text
 
         ts_match = TIMESTAMP_PATTERN.search(line_text)
         if not ts_match:
@@ -269,7 +272,7 @@ def build_time_map():
         # Collect timestamp info for overflow detection (piggyback on this loop)
         timestamp_map[line_num] = (base_ts, word_idx)
 
-    return line_map, timestamp_map
+    return line_map, timestamp_map, line_texts
 
 
 def apply_annotation(line_num, segments, start_time=None, end_time=None):
@@ -322,9 +325,8 @@ def apply_annotation(line_num, segments, start_time=None, end_time=None):
 def apply_all_indicators():
     """Apply indicators and annotations to all lines in the file (batched for performance)."""
     setup_indicators()
-    total_lines = editor.getLineCount()
-    time_map, timestamp_map = build_time_map()
-    
+    time_map, timestamp_map, line_texts = build_time_map()
+
     # Phase 1: Collect all ranges (pure Python, fast)
     error_ranges = []
     parity_ranges = []
@@ -332,43 +334,65 @@ def apply_all_indicators():
     parity_count = 0
     overflow_count = 0
     error_timecodes = []
-    
+
+    # Track document position without positionFromLine API calls
+    line_start_pos = 0
+    total_lines = editor.getLineCount()
+
+    # Pre-fetch lengths for empty lines (skipped in build_time_map) to track position
+    all_line_lengths = {}
     for line_num in range(total_lines):
-        text = editor.getLine(line_num)
-        if not text.strip():
+        if line_num not in line_texts:
+            raw = editor.getLine(line_num)
+            all_line_lengths[line_num] = len(raw)
+
+    for line_num in range(total_lines):
+        text = line_texts.get(line_num)
+
+        if text is None:
+            line_start_pos += all_line_lengths[line_num]
             continue
-        
-        line_start_pos = editor.positionFromLine(line_num)
-        
-        # Collect errors
-        errors = find_errors(text, line_num, timestamp_map)
+
+        # Single iter_hex_words pass: errors + pairs + annotation
         ts_match = TIMESTAMP_PATTERN.search(text)
-        has_error = False
-        for start, end, error_type, _ in errors:
-            if error_type == "parity_error":
-                parity_ranges.append((line_start_pos + start, end - start))
-                parity_count += 1
-                has_error = True
-            else:
-                error_ranges.append((line_start_pos + start, end - start))
-                if error_type == "cc_buffer_overflow_tc":
-                    overflow_count += 1
-                    has_error = True
-        if has_error and ts_match:
+        is_overflow, overflow_cnt = (
+            check_overflow_from_map(line_num, timestamp_map, detected_frame_rate)
+            if ts_match else (False, 0)
+        )
+
+        if ts_match and not validate_timestamp(ts_match.group(0)):
+            error_ranges.append((line_start_pos + ts_match.start(), ts_match.end() - ts_match.start()))
             error_timecodes.append(ts_match.group(0))
-        
-        # Collect pairs
+
+        if is_overflow:
+            error_ranges.append((line_start_pos + ts_match.start(), ts_match.end() - ts_match.start()))
+            overflow_count += 1
+            error_timecodes.append(ts_match.group(0))
+
+        words = list(iter_hex_words(text))
+        total_packets = sum(1 for w in words if not (w.is_paired and w.start > w.pair_start))
         seen_pairs = set()
-        for word in iter_hex_words(text):
+        packet_idx = 0
+
+        for word in words:
+            is_second = word.is_paired and word.start > word.pair_start
+            if not is_second:
+                if not check_parity_fast(word.text):
+                    parity_ranges.append((line_start_pos + word.start, word.end - word.start))
+                    parity_count += 1
+                if is_overflow and packet_idx >= total_packets - overflow_cnt:
+                    error_ranges.append((line_start_pos + word.pair_start, word.pair_end - word.pair_start))
+                packet_idx += 1
             if word.is_paired and word.pair_start not in seen_pairs:
                 pair_ranges.append((line_start_pos + word.pair_start, word.pair_end - word.pair_start))
                 seen_pairs.add(word.pair_start)
-        
-        # Apply annotations
+
         segments = decode_full_line(text)
         if segments:
             times = time_map.get(line_num, (None, None))
             apply_annotation(line_num, segments, times[0], times[1])
+
+        line_start_pos += len(text)
     
     # Phase 2: Apply all indicators in batches (minimize API calls)
     doc_length = editor.getLength()
@@ -646,7 +670,7 @@ def on_dwell_start(args):
 
     # Step 3: Build maps if needed (lazy)
     if timestamp_map_cache is None:
-        time_map_cache, timestamp_map_cache = build_time_map()
+        time_map_cache, timestamp_map_cache, _ = build_time_map()
 
     # Step 4: Check for errors first
     if check_for_errors(line_text, col, line_start_pos, line_num, timestamp_map_cache):
