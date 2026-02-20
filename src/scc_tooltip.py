@@ -104,7 +104,7 @@ def format_tooltip(event_desc, timestamp_desc, buffer_text, highlight_start, hig
     full_buf, markers = format_buffer_with_markers(buffer_text, highlight_start, highlight_end, is_control)
     wrapped = wrap_tooltip_lines(full_buf, markers)
     
-    if overflow_info and overflow_info[0]:
+    if overflow_info and len(overflow_info) > 0 and overflow_info[0]:
         overflow_msg = "!!! BUFFER OVERFLOW !!!"
         buffer_section = overflow_msg + "\n" + "\n".join(wrapped)
     else:

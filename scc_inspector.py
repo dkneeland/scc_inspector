@@ -91,7 +91,10 @@ def find_errors(line_text, line_num=None, timestamp_map=None):
             errors.append((ts_match.start(), ts_match.end(), "invalid_timestamp", None))
         
         if line_num is not None and timestamp_map is not None:
-            is_overflow, overflow_count = check_overflow_from_map(line_num, timestamp_map, detected_frame_rate)
+            try:
+                is_overflow, overflow_count = check_overflow_from_map(line_num, timestamp_map, detected_frame_rate)
+            except Exception:
+                is_overflow, overflow_count = False, 0
             
             if is_overflow:
                 # Mark timestamp for overflow message
@@ -165,16 +168,15 @@ def build_time_map():
         timestamp_map: dict { line_num: (timestamp_str, packet_count) }
         line_texts: dict { line_num: str } for all non-empty lines
     """
-    total_lines = editor.getLineCount()
+    all_lines = editor.getText().splitlines(True)
     line_map = {}
     timestamp_map = {}
     line_texts = {}
     pending_lines = []
     active_lines = []
 
-    for line_num in range(total_lines):
-        line_text = editor.getLine(line_num)
-        if not line_text.strip():
+    for line_num, line_text in enumerate(all_lines):
+        if not line_text or line_text.isspace():
             continue
         line_texts[line_num] = line_text
 
@@ -201,14 +203,17 @@ def build_time_map():
                 has_added_pending = True
 
             if is_eoc(word.text):
-                start_time_str, _ = add_frames(
-                    ts.hours,
-                    ts.minutes,
-                    ts.seconds,
-                    ts.frames,
-                    word_idx,
-                    detected_frame_rate,
-                )
+                try:
+                    start_time_str, _ = add_frames(
+                        ts.hours,
+                        ts.minutes,
+                        ts.seconds,
+                        ts.frames,
+                        word_idx,
+                        detected_frame_rate,
+                    )
+                except (ValueError, TypeError):
+                    start_time_str = None
 
                 for a_line in active_lines:
                     if a_line in line_map:
@@ -224,14 +229,17 @@ def build_time_map():
                 has_added_pending = False
 
             elif is_edm(word.text):
-                end_time_str, _ = add_frames(
-                    ts.hours,
-                    ts.minutes,
-                    ts.seconds,
-                    ts.frames,
-                    word_idx,
-                    detected_frame_rate,
-                )
+                try:
+                    end_time_str, _ = add_frames(
+                        ts.hours,
+                        ts.minutes,
+                        ts.seconds,
+                        ts.frames,
+                        word_idx,
+                        detected_frame_rate,
+                    )
+                except (ValueError, TypeError):
+                    end_time_str = None
 
                 for a_line in active_lines:
                     if a_line in line_map:
@@ -311,23 +319,14 @@ def apply_all_indicators():
     overflow_count = 0
     error_timecodes = []
 
-    # Track document position without positionFromLine API calls
-    line_start_pos = 0
     total_lines = editor.getLineCount()
-
-    # Pre-fetch lengths for empty lines (skipped in build_time_map) to track position
-    all_line_lengths = {}
-    for line_num in range(total_lines):
-        if line_num not in line_texts:
-            raw = editor.getLine(line_num)
-            all_line_lengths[line_num] = len(raw)
 
     for line_num in range(total_lines):
         text = line_texts.get(line_num)
-
         if text is None:
-            line_start_pos += all_line_lengths[line_num]
             continue
+
+        line_start_pos = editor.positionFromLine(line_num)
 
         # Single iter_hex_words pass: errors + pairs + annotation
         ts_match = TIMESTAMP_PATTERN.search(text)
@@ -345,12 +344,11 @@ def apply_all_indicators():
             overflow_count += 1
             error_timecodes.append(ts_match.group(0))
 
-        words = list(iter_hex_words(text))
-        total_packets = sum(1 for w in words if not (w.is_paired and w.start > w.pair_start))
+        total_packets = sum(1 for w in iter_hex_words(text) if not (w.is_paired and w.start > w.pair_start))
         seen_pairs = set()
         packet_idx = 0
 
-        for word in words:
+        for word in iter_hex_words(text):
             is_second = word.is_paired and word.start > word.pair_start
             if not is_second:
                 if not check_parity_fast(word.text):
@@ -368,8 +366,6 @@ def apply_all_indicators():
             times = time_map.get(line_num, (None, None))
             apply_annotation(line_num, segments, times[0], times[1])
 
-        line_start_pos += len(text)
-    
     # Phase 2: Apply all indicators in batches (minimize API calls)
     doc_length = editor.getLength()
     for indicator in (INDICATOR_ERROR, INDICATOR_PAIR, INDICATOR_PARITY):
@@ -420,7 +416,10 @@ def build_buffer_snapshot(line_text, target_word_idx, line_num=None):
         lines_to_process = []
         search_limit = max(-1, line_num - MAX_SCAN_DEPTH)
         for search_line in range(line_num - 1, search_limit, -1):
-            search_text = editor.getLine(search_line)
+            try:
+                search_text = editor.getLine(search_line)
+            except Exception:
+                break
             found_enm = False
 
             for word in iter_hex_words(search_text):
@@ -430,10 +429,11 @@ def build_buffer_snapshot(line_text, target_word_idx, line_num=None):
                     found_enm = True
                     break
 
-            lines_to_process.insert(0, search_text)
+            lines_to_process.append(search_text)
             if found_enm:
                 break
 
+        lines_to_process.reverse()
         for line_text_prev in lines_to_process:
             for word in iter_hex_words(line_text_prev):
                 if word.is_paired and word.start > word.pair_start:
@@ -580,29 +580,30 @@ def format_event_description(evt, word_text):
     """Format the event description line for tooltip."""
     lbl = evt.get("label", "").strip()
     suffix = " (%s)" % lbl if lbl else ""
-    if evt["type"] == "TEXT":
-        return 'TEXT: "%s" (%s)' % (evt["text"], word_text)
-    elif evt["type"] == "PAC":
-        ul = " Und" if evt["underline"] else ""
+    evt_type = evt.get("type", "")
+    if evt_type == "TEXT":
+        return 'TEXT: "%s" (%s)' % (evt.get("text", ""), word_text)
+    elif evt_type == "PAC":
+        ul = " Und" if evt.get("underline", False) else ""
         return "PAC : Row %d, Col %d, %s%s (%s)%s" % (
-            evt["row"],
-            evt["col"],
-            evt["color"],
+            evt.get("row", 0),
+            evt.get("col", 0),
+            evt.get("color", ""),
             ul,
             word_text,
             suffix,
         )
-    elif evt["type"] == "MIDROW":
-        ul = " Und" if evt["underline"] else ""
-        return "CMD : Mid-Row: %s%s%s" % (evt["color"][:3], ul, suffix)
-    elif evt["type"] == "CONTROL":
+    elif evt_type == "MIDROW":
+        ul = " Und" if evt.get("underline", False) else ""
+        return "CMD : Mid-Row: %s%s%s" % (evt.get("color", "")[:3], ul, suffix)
+    elif evt_type == "CONTROL":
         return "CMD : %s (%s)%s" % (
-            evt["name"].split("(")[0].strip(),
+            evt.get("name", "Unknown").split("(")[0].strip(),
             word_text,
             suffix,
         )
-    elif evt["type"] == "INDENT":
-        n = evt["spaces"]
+    elif evt_type == "INDENT":
+        n = evt.get("spaces", 0)
         return "CMD : Indent %d %s (%s)%s" % (
             n,
             "space" if n == 1 else "spaces",
@@ -616,7 +617,10 @@ def format_event_description(evt, word_text):
 def format_timestamp_description(hh, mm, ss, ff, word_idx, base_time):
     """Format the timestamp description line for tooltip."""
     if detected_frame_rate:
-        pkt_time, _ = add_frames(hh, mm, ss, ff, word_idx, detected_frame_rate)
+        try:
+            pkt_time, _ = add_frames(hh, mm, ss, ff, word_idx, detected_frame_rate)
+        except (ValueError, TypeError):
+            return "TIME: %s (+%d)" % (base_time, word_idx)
         pkt_word = "packet" if word_idx == 1 else "packets"
         return "TIME: %s (+%d %s)" % (pkt_time, word_idx, pkt_word)
     return "TIME: %s (+%d)" % (base_time, word_idx)
@@ -624,10 +628,11 @@ def format_timestamp_description(hh, mm, ss, ff, word_idx, base_time):
 
 # Global map caches
 timestamp_map_cache = None
+line_texts_cache = None
 
 def on_dwell_start(args):
     """Handle mouse hover to show tooltip with event info and buffer state."""
-    global timestamp_map_cache
+    global timestamp_map_cache, line_texts_cache
     
     # Step 1: Validate file type
     filename = notepad.getCurrentFilename()
@@ -639,13 +644,14 @@ def on_dwell_start(args):
 
     # Step 2: Get line and position info
     line_num = editor.lineFromPosition(pos)
-    line_text = editor.getLine(line_num)
     line_start_pos = editor.positionFromLine(line_num)
     col = pos - line_start_pos
 
     # Step 3: Build maps if needed (lazy)
     if timestamp_map_cache is None:
-        _, timestamp_map_cache, _ = build_time_map()
+        _, timestamp_map_cache, line_texts_cache = build_time_map()
+
+    line_text = line_texts_cache.get(line_num) or editor.getLine(line_num)
 
     # Step 4: Check for errors first
     if check_for_errors(line_text, col, line_start_pos, line_num, timestamp_map_cache):
@@ -698,12 +704,16 @@ def on_dwell_start(args):
 
 def on_buffer_activated(args):
     """Handle file activation - detect frame rate and apply indicators."""
-    global detected_frame_rate, timestamp_map_cache
+    global detected_frame_rate, timestamp_map_cache, line_texts_cache
     filename = notepad.getCurrentFilename()
     if filename and filename.lower().endswith(".scc"):
         editor.setMouseDwellTime(300)
 
-        file_text = editor.getText()
+        try:
+            file_text = editor.getText()
+        except Exception as e:
+            console.writeError("ERROR: Failed to read file: {0}\n".format(e))
+            return
         frame_rate, _ = detect_frame_rate(file_text)
 
         if frame_rate == "INVALID":
@@ -714,6 +724,7 @@ def on_buffer_activated(args):
             detected_frame_rate = frame_rate
 
         timestamp_map_cache = None  # Clear cache on file load
+        line_texts_cache = None
         setup_indicators()
         apply_all_indicators()
     else:

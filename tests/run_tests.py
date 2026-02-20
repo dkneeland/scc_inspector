@@ -7,7 +7,8 @@ import subprocess
 import os
 import io
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+if hasattr(sys.stdout, "buffer"):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 
 def run_test(script_name):
@@ -17,8 +18,12 @@ def run_test(script_name):
     print(f"Running {script_name}...")
     print("=" * 70)
 
-    result = subprocess.run([sys.executable, script_path], capture_output=False)
-    return result.returncode == 0
+    try:
+        result = subprocess.run([sys.executable, script_path], capture_output=False)
+        return result.returncode == 0
+    except (OSError, subprocess.SubprocessError) as e:
+        print(f"Error running {script_name}: {e}")
+        return False
 
 
 if __name__ == "__main__":
