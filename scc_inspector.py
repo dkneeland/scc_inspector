@@ -102,11 +102,10 @@ def find_errors(line_text, line_num=None, timestamp_map=None):
                 
                 # Mark the overflowing packets with red squiggles
                 packet_idx = 0
-                total_packets = sum(1 for w in iter_hex_words(line_text) if not (w.is_paired and w.start > w.pair_start))
+                total_packets = sum(1 for _ in iter_hex_words(line_text))
                 for word in iter_hex_words(line_text):
-                    if word.is_paired and word.start > word.pair_start:
-                        continue
-                    if packet_idx >= total_packets - overflow_count:
+                    is_second = word.is_paired and word.start > word.pair_start
+                    if not is_second and packet_idx >= total_packets - overflow_count:
                         errors.append((word.pair_start, word.pair_end, "cc_buffer_overflow_packet", overflow_count))
                     packet_idx += 1
     
@@ -191,9 +190,11 @@ def build_time_map():
             continue
 
         word_idx = 0
+        packet_count = 0
         has_added_pending = False
 
         for word in iter_hex_words(line_text):
+            packet_count += 1
             if word.is_paired and word.start > word.pair_start:
                 continue
 
@@ -254,7 +255,7 @@ def build_time_map():
             word_idx += 1
 
         # Collect timestamp info for overflow detection (piggyback on this loop)
-        timestamp_map[line_num] = (base_ts, word_idx)
+        timestamp_map[line_num] = (base_ts, packet_count)
 
     return line_map, timestamp_map, line_texts
 
@@ -344,7 +345,7 @@ def apply_all_indicators():
             overflow_count += 1
             error_timecodes.append(ts_match.group(0))
 
-        total_packets = sum(1 for w in iter_hex_words(text) if not (w.is_paired and w.start > w.pair_start))
+        total_packets = sum(1 for _ in iter_hex_words(text))
         seen_pairs = set()
         packet_idx = 0
 
@@ -356,7 +357,7 @@ def apply_all_indicators():
                     parity_count += 1
                 if is_overflow and packet_idx >= total_packets - overflow_cnt:
                     error_ranges.append((line_start_pos + word.pair_start, word.pair_end - word.pair_start))
-                packet_idx += 1
+            packet_idx += 1
             if word.is_paired and word.pair_start not in seen_pairs:
                 pair_ranges.append((line_start_pos + word.pair_start, word.pair_end - word.pair_start))
                 seen_pairs.add(word.pair_start)
@@ -463,11 +464,14 @@ def build_buffer_snapshot(line_text, target_word_idx, line_num=None):
                         initial_state = None
 
     # Process current line
-    for idx, word in enumerate(iter_hex_words(line_text)):
-        if idx > target_word_idx:
-            break
+    logical_idx = 0
+    for word in iter_hex_words(line_text):
         if word.is_paired and word.start > word.pair_start:
             continue
+        idx = logical_idx
+        logical_idx += 1
+        if idx > target_word_idx:
+            break
         evt = parse_scc_code(word.text, word.is_paired)
 
         if evt["type"] == "PAC":
@@ -565,15 +569,20 @@ def check_for_errors(line_text, col, line_start_pos, line_num, timestamp_map):
 
 
 def find_word_at_position(line_text, col):
-    """Find the hex word at the given column position."""
-    word_idx = 0
+    """Find the hex word at the given column position.
+    Returns (word, logical_idx, packet_idx) where logical_idx skips paired duplicates
+    and packet_idx counts every hex word.
+    """
+    logical_idx = 0
+    packet_idx = 0
     for word in iter_hex_words(line_text):
-        if word.is_paired and word.start > word.pair_start:
-            continue
+        is_second = word.is_paired and word.start > word.pair_start
         if word.pair_start <= col < word.pair_end:
-            return word, word_idx
-        word_idx += 1
-    return None, -1
+            return word, logical_idx, packet_idx
+        packet_idx += 1
+        if not is_second:
+            logical_idx += 1
+    return None, -1, -1
 
 
 def format_event_description(evt, word_text):
@@ -669,7 +678,7 @@ def on_dwell_start(args):
         return
 
     # Step 6: Find word under cursor
-    word, word_idx = find_word_at_position(line_text, col)
+    word, logical_idx, packet_idx = find_word_at_position(line_text, col)
     if word is None:
         return
 
@@ -680,14 +689,14 @@ def on_dwell_start(args):
     overflow_info = None
     is_overflow, overflow_count = check_overflow_from_map(line_num, timestamp_map_cache, detected_frame_rate)
     if is_overflow:
-        total_packets = sum(1 for w in iter_hex_words(line_text) if not (w.is_paired and w.start > w.pair_start))
-        if word_idx >= total_packets - overflow_count:
+        total_packets = sum(1 for _ in iter_hex_words(line_text))
+        if packet_idx >= total_packets - overflow_count:
             overflow_info = (True, overflow_count)
 
     # Step 9: Format tooltip components
     event_desc = format_event_description(evt, word.text)
-    timestamp_desc = format_timestamp_description(ts.hours, ts.minutes, ts.seconds, ts.frames, word_idx, base_time)
-    buffer_text, hl_start, hl_end = build_buffer_snapshot(line_text, word_idx, line_num)
+    timestamp_desc = format_timestamp_description(ts.hours, ts.minutes, ts.seconds, ts.frames, packet_idx, base_time)
+    buffer_text, hl_start, hl_end = build_buffer_snapshot(line_text, logical_idx, line_num)
 
     # Step 10: Generate and show tooltip
     tooltip = format_tooltip(
