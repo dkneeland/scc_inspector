@@ -50,6 +50,7 @@ scc_inspector/
 │   ├── test_control_commands.py  # Control command tests
 │   ├── test_overflow.py       # CC buffer overflow tests
 │   └── debug_buffer.py        # Interactive debugging tool
+├── SCC.xml                    # Notepad++ User Defined Language (UDL)
 └── reference/                 # Reference documentation
     └── ...
 ```
@@ -97,9 +98,20 @@ except Exception as e:
    - Green box: Paired codes
 5. Decoded captions appear as annotations below each line with display timing (start -> end)
 
-## Enhanced Syntax Highlighting (Optional)
+## Syntax Highlighting (Optional)
 
-For additional syntax highlighting, install the [EnhanceAnyLexer plugin](https://github.com/Ekopalypse/EnhanceAnyLexer) and add this configuration (optimized for dark mode with Obsidian theme):
+### User Defined Language (UDL)
+
+The included `SCC.xml` registers "SCC" as a named language in Notepad++, which is required for EnhanceAnyLexer to apply regex-based coloring to `.scc` files.
+
+1. In Notepad++, go to Language > User Defined Language > Define your language...
+2. Click **Import** and select `SCC.xml` from this repo
+3. Restart Notepad++
+4. Open an `.scc` file and select Language > SCC from the menu
+
+### EnhanceAnyLexer (regex-based colors)
+
+For color-coded highlighting of timestamps, control codes, and captions, install the [EnhanceAnyLexer plugin](https://github.com/Ekopalypse/EnhanceAnyLexer) and add this configuration (optimized for dark mode with Obsidian theme):
 
 ```ini
 [Global]
@@ -122,6 +134,8 @@ use_rgb_format=0
 ; 4. Caption Start/End (Blue) - Must come after Grey to override
 #fab387 = \b(942[0cf]|1c2[0cf]|152[0cf]|9d2[0cf])\b
 ```
+
+> Note: The UDL must be installed first — EnhanceAnyLexer uses the language name "SCC" to match the config section above.
 
 ## Running Tests
 
