@@ -34,7 +34,7 @@ class MockEditor:
         pass
 
     def getText(self):
-        return ""
+        return "\n".join(self.lines)
 
     def lineFromPosition(self, pos):
         return 0
@@ -383,7 +383,7 @@ def test_frame_rate_detection(name, file_content, expected_rate):
 def test_event_times(name, lines, start_line, frame_rate, expected_start, expected_end):
     editor.lines = lines
     scc_inspector.detected_frame_rate = frame_rate
-    time_map, _ = build_time_map()
+    time_map, _, _ = build_time_map()
     times = time_map.get(start_line, (None, None))
     start, end = times[0], times[1]
     if start == expected_start and end == expected_end:
@@ -685,6 +685,20 @@ if __name__ == "__main__":
             "23.98",
             None,
             None,
+        ),
+        (
+            # RCL EDM EOC RCL PAC text... - content loaded after EOC on line 0,
+            # displayed by EOC on line 1, cleared by EDM on line 2.
+            "EOC before content on same line",
+            [
+                "00:00:00:00\t9420 9420 942c 942f 9420 94d6 5b49 dad5 cbd5 5d80 94f2 97a2 57e5 ece3 ef6d e520 f4ef 20d5 c120 c8e9 6768 ae80",
+                "00:00:01:07\t9420 942c 942f 9420 94d0 9723 496e 2061 20f7 eff2 ec64 20f7 68e5 f2e5 2061 62ef 75f4 2038 b080 9470 9723 70e5 f2e3 e56e f420 efe6 20f4 68e5 2070 ef70 75ec 61f4 e9ef 6e80",
+                "00:00:03:08\t9420 942c 942f 9420 94d0 97a2 6861 7320 73ef 6de5 206b e96e 6420 efe6 2073 7570 e5f2 70ef f7e5 f280 94f2 9723 e361 ecec e564 2061 20a2 5175 e9f2 6b2c a280",
+            ],
+            0,
+            "29.97 NDF",
+            "00:00:01:09",  # start = EOC on line 1 (word_idx=2: 9420 942c 942f)
+            "00:00:03:09",  # end = EDM on line 2 (word_idx=1: 9420 942c)
         ),
     ]
 
