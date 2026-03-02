@@ -117,9 +117,9 @@ def packet_difference(ts1_str, ts2_str, frame_rate_str):
     try:
         if compare_timestamps(ts1_str, ts2_str) < 0:
             return 0
-        
+
         ts2 = parse_timestamp_str(ts2_str)
-        
+
         # Binary search to find how many packets from ts2 reach or exceed ts1
         low, high = 0, 10000
         while low < high:
@@ -129,7 +129,7 @@ def packet_difference(ts1_str, ts2_str, frame_rate_str):
                 high = mid - 1
             else:
                 low = mid
-        
+
         return low + 1
     except (ValueError, IndexError, AttributeError, TypeError):
         return 0

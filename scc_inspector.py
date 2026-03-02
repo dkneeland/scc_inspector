@@ -31,15 +31,138 @@ from scc_buffer_format import render_line_annotation
 MAX_SCAN_DEPTH = 1000  # Max lines to scan backwards for buffer state (prevents UI freeze)
 
 # Static parity lookup table - bytes with odd parity (128 valid bytes out of 256)
-VALID_BYTES = frozenset([
-    1, 2, 4, 7, 8, 11, 13, 14, 16, 19, 21, 22, 25, 26, 28, 31, 32, 35, 37, 38, 41, 42, 44, 47,
-    49, 50, 52, 55, 56, 59, 61, 62, 64, 67, 69, 70, 73, 74, 76, 79, 81, 82, 84, 87, 88, 91, 93,
-    94, 97, 98, 100, 103, 104, 107, 109, 110, 112, 115, 117, 118, 121, 122, 124, 127, 128, 131,
-    133, 134, 137, 138, 140, 143, 145, 146, 148, 151, 152, 155, 157, 158, 161, 162, 164, 167,
-    168, 171, 173, 174, 176, 179, 181, 182, 185, 186, 188, 191, 193, 194, 196, 199, 200, 203,
-    205, 206, 208, 211, 213, 214, 217, 218, 220, 223, 224, 227, 229, 230, 233, 234, 236, 239,
-    241, 242, 244, 247, 248, 251, 253, 254
-])
+VALID_BYTES = frozenset(
+    [
+        1,
+        2,
+        4,
+        7,
+        8,
+        11,
+        13,
+        14,
+        16,
+        19,
+        21,
+        22,
+        25,
+        26,
+        28,
+        31,
+        32,
+        35,
+        37,
+        38,
+        41,
+        42,
+        44,
+        47,
+        49,
+        50,
+        52,
+        55,
+        56,
+        59,
+        61,
+        62,
+        64,
+        67,
+        69,
+        70,
+        73,
+        74,
+        76,
+        79,
+        81,
+        82,
+        84,
+        87,
+        88,
+        91,
+        93,
+        94,
+        97,
+        98,
+        100,
+        103,
+        104,
+        107,
+        109,
+        110,
+        112,
+        115,
+        117,
+        118,
+        121,
+        122,
+        124,
+        127,
+        128,
+        131,
+        133,
+        134,
+        137,
+        138,
+        140,
+        143,
+        145,
+        146,
+        148,
+        151,
+        152,
+        155,
+        157,
+        158,
+        161,
+        162,
+        164,
+        167,
+        168,
+        171,
+        173,
+        174,
+        176,
+        179,
+        181,
+        182,
+        185,
+        186,
+        188,
+        191,
+        193,
+        194,
+        196,
+        199,
+        200,
+        203,
+        205,
+        206,
+        208,
+        211,
+        213,
+        214,
+        217,
+        218,
+        220,
+        223,
+        224,
+        227,
+        229,
+        230,
+        233,
+        234,
+        236,
+        239,
+        241,
+        242,
+        244,
+        247,
+        248,
+        251,
+        253,
+        254,
+    ]
+)
 
 
 def decode_full_line(line_text):
@@ -60,19 +183,17 @@ def check_overflow_from_map(line_num, timestamp_map, frame_rate):
     """Check overflow using pre-built timestamp map. Returns (is_overflow, packet_overflow_count)."""
     if line_num not in timestamp_map or not frame_rate:
         return False, 0
-    
+
     next_line = line_num + 2
     if next_line not in timestamp_map:
         return False, 0
-    
+
     try:
         ts_str, packet_count = timestamp_map[line_num]
         next_ts_str, _ = timestamp_map[next_line]
-        
+
         ts = parse_timestamp_str(ts_str)
-        last_pkt_time, _ = add_frames(
-            ts.hours, ts.minutes, ts.seconds, ts.frames, packet_count - 1, frame_rate
-        )
+        last_pkt_time, _ = add_frames(ts.hours, ts.minutes, ts.seconds, ts.frames, packet_count - 1, frame_rate)
         if compare_timestamps(last_pkt_time, next_ts_str) >= 0:
             diff = packet_difference(last_pkt_time, next_ts_str, frame_rate) + 1
             return True, diff
@@ -89,17 +210,17 @@ def find_errors(line_text, line_num=None, timestamp_map=None):
     if ts_match:
         if not validate_timestamp(ts_match.group(0)):
             errors.append((ts_match.start(), ts_match.end(), "invalid_timestamp", None))
-        
+
         if line_num is not None and timestamp_map is not None:
             try:
                 is_overflow, overflow_count = check_overflow_from_map(line_num, timestamp_map, detected_frame_rate)
             except Exception:
                 is_overflow, overflow_count = False, 0
-            
+
             if is_overflow:
                 # Mark timestamp for overflow message
                 errors.append((ts_match.start(), ts_match.end(), "cc_buffer_overflow_tc", overflow_count))
-                
+
                 # Mark the overflowing packets with red squiggles
                 packet_idx = 0
                 total_packets = sum(1 for _ in iter_hex_words(line_text))
@@ -108,7 +229,7 @@ def find_errors(line_text, line_num=None, timestamp_map=None):
                     if not is_second and packet_idx >= total_packets - overflow_count:
                         errors.append((word.pair_start, word.pair_end, "cc_buffer_overflow_packet", overflow_count))
                     packet_idx += 1
-    
+
     for word in iter_hex_words(line_text):
         if not check_parity_fast(word.text):
             errors.append((word.start, word.end, "parity_error", None))
@@ -336,10 +457,7 @@ def apply_all_indicators():
 
         # Single iter_hex_words pass: errors + pairs + annotation
         ts_match = TIMESTAMP_PATTERN.search(text)
-        is_overflow, overflow_cnt = (
-            check_overflow_from_map(line_num, timestamp_map, detected_frame_rate)
-            if ts_match else (False, 0)
-        )
+        is_overflow, overflow_cnt = check_overflow_from_map(line_num, timestamp_map, detected_frame_rate) if ts_match else (False, 0)
 
         if ts_match and not validate_timestamp(ts_match.group(0)):
             error_ranges.append((line_start_pos + ts_match.start(), ts_match.end() - ts_match.start()))
@@ -382,19 +500,19 @@ def apply_all_indicators():
     for indicator in (INDICATOR_ERROR, INDICATOR_PAIR, INDICATOR_PARITY):
         editor.setIndicatorCurrent(indicator)
         editor.indicatorClearRange(0, doc_length)
-    
+
     editor.setIndicatorCurrent(INDICATOR_ERROR)
     for pos, length in error_ranges:
         editor.indicatorFillRange(pos, length)
-    
+
     editor.setIndicatorCurrent(INDICATOR_PARITY)
     for pos, length in parity_ranges:
         editor.indicatorFillRange(pos, length)
-    
+
     editor.setIndicatorCurrent(INDICATOR_PAIR)
     for pos, length in pair_ranges:
         editor.indicatorFillRange(pos, length)
-    
+
     # Error summary annotation
     if parity_count or overflow_count or never_displayed_count:
         summary_parts = []
@@ -651,10 +769,11 @@ def format_timestamp_description(hh, mm, ss, ff, word_idx, base_time):
 timestamp_map_cache = None
 line_texts_cache = None
 
+
 def on_dwell_start(args):
     """Handle mouse hover to show tooltip with event info and buffer state."""
     global timestamp_map_cache, line_texts_cache
-    
+
     # Step 1: Validate file type
     filename = notepad.getCurrentFilename()
     if not filename or not filename.lower().endswith(".scc"):
