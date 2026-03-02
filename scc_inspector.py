@@ -248,7 +248,7 @@ def build_time_map():
 
                 active_lines = []
 
-            elif is_rcl(word.text) or is_enm(word.text):
+            elif is_enm(word.text):
                 pending_lines = []
                 has_added_pending = False
 
@@ -260,13 +260,17 @@ def build_time_map():
     return line_map, timestamp_map, line_texts
 
 
-def apply_annotation(line_num, segments, start_time=None, end_time=None):
+def apply_annotation(line_num, segments, start_time=None, end_time=None, never_displayed=False):
     """Apply styled annotation to line showing decoded caption text."""
     if not segments:
         return
 
     final_segments = []
-    if start_time and end_time:
+    if never_displayed:
+        final_segments.append((" | ", "timing"))
+        final_segments.append((u"⚠ never displayed", "error_summary"))  # fmt: skip
+        final_segments.append((" | ", "timing"))
+    elif start_time and end_time:
         final_segments.append((" | {0} -> {1} | ".format(start_time, end_time), "timing"))
 
     for text, style_info in segments:
@@ -318,6 +322,7 @@ def apply_all_indicators():
     pair_ranges = []
     parity_count = 0
     overflow_count = 0
+    never_displayed_count = 0
     error_timecodes = []
 
     total_lines = editor.getLineCount()
@@ -364,8 +369,13 @@ def apply_all_indicators():
 
         segments = decode_full_line(text)
         if segments:
-            times = time_map.get(line_num, (None, None))
-            apply_annotation(line_num, segments, times[0], times[1])
+            times = time_map.get(line_num)
+            is_never_displayed = times is None or times[1] is None
+            if is_never_displayed:
+                never_displayed_count += 1
+                if ts_match:
+                    error_timecodes.append(ts_match.group(0))
+            apply_annotation(line_num, segments, times[0] if times else None, times[1] if times else None, is_never_displayed)
 
     # Phase 2: Apply all indicators in batches (minimize API calls)
     doc_length = editor.getLength()
@@ -386,12 +396,14 @@ def apply_all_indicators():
         editor.indicatorFillRange(pos, length)
     
     # Error summary annotation
-    if parity_count or overflow_count:
+    if parity_count or overflow_count or never_displayed_count:
         summary_parts = []
         if parity_count:
             summary_parts.append("{0} parity error{1}".format(parity_count, "s" if parity_count > 1 else ""))
         if overflow_count:
             summary_parts.append("{0} buffer overflow{1}".format(overflow_count, "s" if overflow_count > 1 else ""))
+        if never_displayed_count:
+            summary_parts.append("{0} never displayed caption{1}".format(never_displayed_count, "s" if never_displayed_count > 1 else ""))
         summary = "ERRORS: " + ", ".join(summary_parts)
         if error_timecodes:
             summary += "\nErrors at: " + ", ".join(error_timecodes)
