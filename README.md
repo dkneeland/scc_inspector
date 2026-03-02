@@ -19,6 +19,9 @@ A Notepad++ plugin for analyzing and debugging SCC (Scenarist Closed Caption) fi
 ![Tooltip details](images/screenshot-tooltip.png)
 *Hover tooltips show decoded commands, timestamps, and buffer state*
 
+![Error summary](images/screenshot-error.png)
+*Error summary annotation displayed at the top of the file on load*
+
 ## Limitations
 
 - **Pop-on captions only**: Currently tested and optimized for pop-on style captions
