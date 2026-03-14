@@ -17,6 +17,7 @@ class MockConsole:
 class MockEditor:
     def __init__(self):
         self.lines = []
+        self.firstVisibleLine = 0
 
     def clearCallbacks(self, *args):
         pass
@@ -78,6 +79,15 @@ class MockEditor:
     def annotationSetVisible(self, *args):
         pass
 
+    def docLineFromVisible(self, line):
+        return line
+
+    def visibleFromDocLine(self, line):
+        return line
+
+    def getLength(self):
+        return 0
+
 
 class MockNotepad:
     def clearCallbacks(self, *args):
@@ -89,6 +99,9 @@ class MockNotepad:
     def getCurrentFilename(self):
         return "test.txt"
 
+    def getCurrentBufferID(self):
+        return 1
+
 
 class MockNpp:
     pass
@@ -99,7 +112,7 @@ sys.modules["Npp"].editor = MockEditor()
 sys.modules["Npp"].notepad = MockNotepad()
 sys.modules["Npp"].console = MockConsole()
 sys.modules["Npp"].SCINTILLANOTIFICATION = type("obj", (object,), {"DWELLSTART": 0, "UPDATEUI": 1})
-sys.modules["Npp"].NOTIFICATION = type("obj", (object,), {"BUFFERACTIVATED": 0})
+sys.modules["Npp"].NOTIFICATION = type("obj", (object,), {"BUFFERACTIVATED": 0, "FILECLOSED": 1})
 sys.modules["Npp"].INDICATORSTYLE = type("obj", (object,), {"SQUIGGLE": 0, "ROUNDBOX": 1})
 sys.modules["Npp"].ANNOTATIONVISIBLE = type("obj", (object,), {"BOXED": 0})
 

@@ -769,6 +769,9 @@ def format_timestamp_description(hh, mm, ss, ff, word_idx, base_time):
 timestamp_map_cache = None
 line_texts_cache = None
 
+# Content hash cache per buffer to avoid unnecessary re-renders
+buffer_content_hash = {}
+
 
 def on_dwell_start(args):
     """Handle mouse hover to show tooltip with event info and buffer state."""
@@ -844,7 +847,7 @@ def on_dwell_start(args):
 
 def on_buffer_activated(args):
     """Handle file activation - detect frame rate and apply indicators."""
-    global detected_frame_rate, timestamp_map_cache, line_texts_cache
+    global detected_frame_rate, timestamp_map_cache, line_texts_cache, buffer_content_hash
     filename = notepad.getCurrentFilename()
     if filename and filename.lower().endswith(".scc"):
         editor.setMouseDwellTime(300)
@@ -854,6 +857,12 @@ def on_buffer_activated(args):
         except Exception as e:
             console.writeError("ERROR: Failed to read file: {0}\n".format(e))
             return
+
+        # Check if content changed since last render
+        buffer_id = notepad.getCurrentBufferID()
+        current_hash = hash(file_text)
+        content_changed = buffer_content_hash.get(buffer_id) != current_hash
+
         frame_rate, _ = detect_frame_rate(file_text)
 
         if frame_rate == "INVALID":
@@ -865,16 +874,37 @@ def on_buffer_activated(args):
 
         timestamp_map_cache = None  # Clear cache on file load
         line_texts_cache = None
-        setup_indicators()
-        apply_all_indicators()
+
+        if content_changed:
+            # Save scroll position (document line)
+            first_visible_line = editor.docLineFromVisible(editor.firstVisibleLine)
+
+            buffer_content_hash[buffer_id] = current_hash
+            setup_indicators()
+            apply_all_indicators()
+
+            # Restore scroll position
+            editor.firstVisibleLine = editor.visibleFromDocLine(first_visible_line)
+        else:
+            setup_indicators()
     else:
         editor.setMouseDwellTime(10000000)
 
 
+def on_file_closed(args):
+    """Clean up content hash cache when buffer is closed."""
+    global buffer_content_hash
+    buffer_id = args.get("bufferID")
+    if buffer_id and buffer_id in buffer_content_hash:
+        del buffer_content_hash[buffer_id]
+
+
 editor.clearCallbacks([SCINTILLANOTIFICATION.DWELLSTART])
 notepad.clearCallbacks([NOTIFICATION.BUFFERACTIVATED])
+notepad.clearCallbacks([NOTIFICATION.FILECLOSED])
 
 notepad.callback(on_buffer_activated, [NOTIFICATION.BUFFERACTIVATED])
+notepad.callback(on_file_closed, [NOTIFICATION.FILECLOSED])
 editor.callback(on_dwell_start, [SCINTILLANOTIFICATION.DWELLSTART])
 
 on_buffer_activated(None)
