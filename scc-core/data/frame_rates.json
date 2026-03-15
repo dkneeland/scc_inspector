@@ -1,0 +1,52 @@
+{
+  "description": "Frame rate definitions and cadence calculations for SCC timecode",
+  "frameRates": {
+    "23.98": {
+      "name": "23.98",
+      "videoFps": 24,
+      "isDropFrame": false,
+      "cadence": {
+        "packets": 5,
+        "frames": 4
+      },
+      "maxFrame": 23,
+      "description": "23.98 fps (film rate)"
+    },
+    "25": {
+      "name": "25",
+      "videoFps": 25,
+      "isDropFrame": false,
+      "cadence": {
+        "packets": 6,
+        "frames": 5
+      },
+      "maxFrame": 24,
+      "description": "25 fps (PAL)"
+    },
+    "29.97 DF": {
+      "name": "29.97 DF",
+      "videoFps": 30,
+      "isDropFrame": true,
+      "cadence": null,
+      "maxFrame": 29,
+      "description": "29.97 fps Drop Frame"
+    },
+    "29.97 NDF": {
+      "name": "29.97 NDF",
+      "videoFps": 30,
+      "isDropFrame": false,
+      "cadence": null,
+      "maxFrame": 29,
+      "description": "29.97 fps Non-Drop Frame"
+    }
+  },
+  "dropFrameRules": {
+    "skipFramesAtMinute": [0, 1],
+    "skipEveryMinuteExcept": [0, 10, 20, 30, 40, 50]
+  },
+  "detectionRules": {
+    "dropFrameSeparator": ";",
+    "sampleLimit": 50,
+    "invalidFrameThreshold": 29
+  }
+}

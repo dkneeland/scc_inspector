@@ -11,6 +11,8 @@ DO NOT MODIFY unless you understand the EIA-608 specification.
 
 import re
 
+from scc_data import CHAR_MAP, COLOR_LIST, ROW_MAP, COMMAND_NAMES, VALID_BYTES
+
 
 # Bit-masking functions for EIA-608 command detection
 def is_preamble(cc_data):
@@ -34,33 +36,6 @@ def is_tab_offset(cc_data):
 # Pattern matching
 HEX_PATTERN = re.compile(r"\b[0-9a-fA-F]{4}\b")
 TIMESTAMP_PATTERN = re.compile(r"\d\d:\d\d:\d\d[:;]\d\d")
-
-# EIA-608 Character Map
-CHAR_MAP = u" !\"#$%&'()á+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[é]íóúabcdefghijklmnopqrstuvwxyzç÷Ññ█®°½¿™¢£♪à èâêîôûÁÉÓÚÜü‘¡*’—©℠•“”ÀÂÇÈÊËëÎÏïÔÙùÛ«»ÃãÍÌìÒòÕõ{}\\^_¦~ÄäÖöß¥¤|ÅåØø┌┐└┘"  # fmt: skip
-
-# Color codes
-COLOR_LIST = ("White", "Green", "Blue", "Cyan", "Red", "Yellow", "Magenta", "Italics")
-
-# Row mapping
-ROW_MAP = [10, -1, 0, 1, 2, 3, 11, 12, 13, 14, 4, 5, 6, 7, 8, 9]
-
-# Control command names
-COMMAND_NAMES = {
-    0x20: "Resume Caption Loading (RCL)",
-    0x21: "Backspace",
-    0x24: "Delete to End of Row (DER)",
-    0x25: "Roll-Up 2 Lines (RU2)",
-    0x26: "Roll-Up 3 Lines (RU3)",
-    0x27: "Roll-Up 4 Lines (RU4)",
-    0x28: "Flash ON (FON)",
-    0x29: "Resume Direct Captioning (RDC)",
-    0x2A: "Text Restart (TR)",
-    0x2B: "Resume Text Display (RTD)",
-    0x2C: "Clear Screen (EDM)",
-    0x2D: "Carriage Return (CR)",
-    0x2E: "Erase Non-Displayed Memory (ENM)",
-    0x2F: "Display Caption (EOC)",
-}
 
 
 class HexWord:
@@ -124,7 +99,7 @@ def parse_scc_code(word_text, is_pair=False):
     raw_val = int(word, 16)
     b1 = (raw_val >> 8) & 0xFF
     b2 = raw_val & 0xFF
-    if not (bin(b1).count("1") % 2 != 0 and bin(b2).count("1") % 2 != 0):
+    if b1 not in VALID_BYTES or b2 not in VALID_BYTES:
         return {"type": "ERROR", "desc": "Parity Error"}
 
     cc_data = raw_val & 0x7F7F

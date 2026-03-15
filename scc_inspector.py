@@ -6,6 +6,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 from Npp import *  # noqa: F403
+from scc_data import VALID_BYTES
 from scc_decoder import (
     iter_hex_words,
     parse_scc_code,
@@ -29,140 +30,6 @@ from scc_buffer_format import render_line_annotation
 
 # Configuration
 MAX_SCAN_DEPTH = 1000  # Max lines to scan backwards for buffer state (prevents UI freeze)
-
-# Static parity lookup table - bytes with odd parity (128 valid bytes out of 256)
-VALID_BYTES = frozenset(
-    [
-        1,
-        2,
-        4,
-        7,
-        8,
-        11,
-        13,
-        14,
-        16,
-        19,
-        21,
-        22,
-        25,
-        26,
-        28,
-        31,
-        32,
-        35,
-        37,
-        38,
-        41,
-        42,
-        44,
-        47,
-        49,
-        50,
-        52,
-        55,
-        56,
-        59,
-        61,
-        62,
-        64,
-        67,
-        69,
-        70,
-        73,
-        74,
-        76,
-        79,
-        81,
-        82,
-        84,
-        87,
-        88,
-        91,
-        93,
-        94,
-        97,
-        98,
-        100,
-        103,
-        104,
-        107,
-        109,
-        110,
-        112,
-        115,
-        117,
-        118,
-        121,
-        122,
-        124,
-        127,
-        128,
-        131,
-        133,
-        134,
-        137,
-        138,
-        140,
-        143,
-        145,
-        146,
-        148,
-        151,
-        152,
-        155,
-        157,
-        158,
-        161,
-        162,
-        164,
-        167,
-        168,
-        171,
-        173,
-        174,
-        176,
-        179,
-        181,
-        182,
-        185,
-        186,
-        188,
-        191,
-        193,
-        194,
-        196,
-        199,
-        200,
-        203,
-        205,
-        206,
-        208,
-        211,
-        213,
-        214,
-        217,
-        218,
-        220,
-        223,
-        224,
-        227,
-        229,
-        230,
-        233,
-        234,
-        236,
-        239,
-        241,
-        242,
-        244,
-        247,
-        248,
-        251,
-        253,
-        254,
-    ]
-)
 
 
 def decode_full_line(line_text):
@@ -202,7 +69,7 @@ def check_overflow_from_map(line_num, timestamp_map, frame_rate):
         return False, 0
 
 
-def find_errors(line_text, line_num=None, timestamp_map=None):
+def find_errors(line_text, line_num=None, timestamp_map=None, frame_rate=None):
     """Find all errors in a line (invalid timestamps, parity errors, CC buffer overflow)."""
     errors = []
 
@@ -213,7 +80,7 @@ def find_errors(line_text, line_num=None, timestamp_map=None):
 
         if line_num is not None and timestamp_map is not None:
             try:
-                is_overflow, overflow_count = check_overflow_from_map(line_num, timestamp_map, detected_frame_rate)
+                is_overflow, overflow_count = check_overflow_from_map(line_num, timestamp_map, frame_rate)
             except Exception:
                 is_overflow, overflow_count = False, 0
 
@@ -246,7 +113,7 @@ STYLE_ANNOTATION_TIMING = 22
 STYLE_ANNOTATION_NEWLINE = 23
 STYLE_ANNOTATION_ERROR_SUMMARY = 25
 
-detected_frame_rate = None
+buffer_state = {}  # {buffer_id: {'hash': int, 'frame_rate': str, 'timestamp_map': dict, 'line_texts': dict, 'time_map': dict}}
 
 
 def setup_indicators():
@@ -280,7 +147,7 @@ def setup_indicators():
     editor.annotationSetVisible(ANNOTATIONVISIBLE.STANDARD)
 
 
-def build_time_map():
+def build_time_map(frame_rate):
     """Single-pass state machine to map line numbers to start/end times.
 
     Returns: (time_map, timestamp_map, line_texts)
@@ -332,7 +199,7 @@ def build_time_map():
                         ts.seconds,
                         ts.frames,
                         word_idx,
-                        detected_frame_rate,
+                        frame_rate,
                     )
                 except (ValueError, TypeError):
                     start_time_str = None
@@ -358,7 +225,7 @@ def build_time_map():
                         ts.seconds,
                         ts.frames,
                         word_idx,
-                        detected_frame_rate,
+                        frame_rate,
                     )
                 except (ValueError, TypeError):
                     end_time_str = None
@@ -432,10 +299,9 @@ def apply_annotation(line_num, segments, start_time=None, end_time=None, never_d
     editor.annotationSetStyles(line_num, bytes(style_bytes))
 
 
-def apply_all_indicators():
+def apply_all_indicators(frame_rate, time_map, timestamp_map, line_texts):
     """Apply indicators and annotations to all lines in the file (batched for performance)."""
     setup_indicators()
-    time_map, timestamp_map, line_texts = build_time_map()
 
     # Phase 1: Collect all ranges (pure Python, fast)
     error_ranges = []
@@ -457,7 +323,7 @@ def apply_all_indicators():
 
         # Single iter_hex_words pass: errors + pairs + annotation
         ts_match = TIMESTAMP_PATTERN.search(text)
-        is_overflow, overflow_cnt = check_overflow_from_map(line_num, timestamp_map, detected_frame_rate) if ts_match else (False, 0)
+        is_overflow, overflow_cnt = check_overflow_from_map(line_num, timestamp_map, frame_rate) if ts_match else (False, 0)
 
         if ts_match and not validate_timestamp(ts_match.group(0)):
             error_ranges.append((line_start_pos + ts_match.start(), ts_match.end() - ts_match.start()))
@@ -677,9 +543,9 @@ def build_buffer_snapshot(line_text, target_word_idx, line_num=None):
     return result, -1, -1
 
 
-def check_for_errors(line_text, col, line_start_pos, line_num, timestamp_map):
+def check_for_errors(line_text, col, line_start_pos, line_num, timestamp_map, frame_rate):
     """Check if cursor is over an error and show error tooltip if so."""
-    errors = find_errors(line_text, line_num, timestamp_map)
+    errors = find_errors(line_text, line_num, timestamp_map, frame_rate)
     for start, end, error_type, extra_data in errors:
         if start <= col < end:
             if error_type == "parity_error":
@@ -753,11 +619,11 @@ def format_event_description(evt, word_text):
         return decode_single_code(word_text, False)
 
 
-def format_timestamp_description(hh, mm, ss, ff, word_idx, base_time):
+def format_timestamp_description(hh, mm, ss, ff, word_idx, base_time, frame_rate):
     """Format the timestamp description line for tooltip."""
-    if detected_frame_rate:
+    if frame_rate:
         try:
-            pkt_time, _ = add_frames(hh, mm, ss, ff, word_idx, detected_frame_rate)
+            pkt_time, _ = add_frames(hh, mm, ss, ff, word_idx, frame_rate)
         except (ValueError, TypeError):
             return "TIME: %s (+%d)" % (base_time, word_idx)
         pkt_word = "packet" if word_idx == 1 else "packets"
@@ -765,19 +631,8 @@ def format_timestamp_description(hh, mm, ss, ff, word_idx, base_time):
     return "TIME: %s (+%d)" % (base_time, word_idx)
 
 
-# Global map caches
-timestamp_map_cache = None
-line_texts_cache = None
-
-# Content hash cache per buffer to avoid unnecessary re-renders
-buffer_content_hash = {}
-
-
 def on_dwell_start(args):
     """Handle mouse hover to show tooltip with event info and buffer state."""
-    global timestamp_map_cache, line_texts_cache
-
-    # Step 1: Validate file type
     filename = notepad.getCurrentFilename()
     if not filename or not filename.lower().endswith(".scc"):
         return
@@ -785,19 +640,24 @@ def on_dwell_start(args):
     if pos == -1:
         return
 
+    buffer_id = notepad.getCurrentBufferID()
+    state = buffer_state.get(buffer_id)
+    if not state:
+        return
+
+    frame_rate = state.get("frame_rate")
+    timestamp_map = state.get("timestamp_map")
+    line_texts = state.get("line_texts")
+
     # Step 2: Get line and position info
     line_num = editor.lineFromPosition(pos)
     line_start_pos = editor.positionFromLine(line_num)
     col = pos - line_start_pos
 
-    # Step 3: Build maps if needed (lazy)
-    if timestamp_map_cache is None:
-        _, timestamp_map_cache, line_texts_cache = build_time_map()
-
-    line_text = line_texts_cache.get(line_num) or editor.getLine(line_num)
+    line_text = line_texts.get(line_num) or editor.getLine(line_num)
 
     # Step 4: Check for errors first
-    if check_for_errors(line_text, col, line_start_pos, line_num, timestamp_map_cache):
+    if check_for_errors(line_text, col, line_start_pos, line_num, timestamp_map, frame_rate):
         return
 
     # Step 5: Parse timestamp
@@ -821,7 +681,7 @@ def on_dwell_start(args):
 
     # Step 8: Check if this packet is in overflow
     overflow_info = None
-    is_overflow, overflow_count = check_overflow_from_map(line_num, timestamp_map_cache, detected_frame_rate)
+    is_overflow, overflow_count = check_overflow_from_map(line_num, timestamp_map, frame_rate)
     if is_overflow:
         total_packets = sum(1 for _ in iter_hex_words(line_text))
         if packet_idx >= total_packets - overflow_count:
@@ -829,7 +689,7 @@ def on_dwell_start(args):
 
     # Step 9: Format tooltip components
     event_desc = format_event_description(evt, word.text)
-    timestamp_desc = format_timestamp_description(ts.hours, ts.minutes, ts.seconds, ts.frames, packet_idx, base_time)
+    timestamp_desc = format_timestamp_description(ts.hours, ts.minutes, ts.seconds, ts.frames, packet_idx, base_time, frame_rate)
     buffer_text, hl_start, hl_end = build_buffer_snapshot(line_text, logical_idx, line_num)
 
     # Step 10: Generate and show tooltip
@@ -847,7 +707,7 @@ def on_dwell_start(args):
 
 def on_buffer_activated(args):
     """Handle file activation - detect frame rate and apply indicators."""
-    global detected_frame_rate, timestamp_map_cache, line_texts_cache, buffer_content_hash
+    global buffer_state
     filename = notepad.getCurrentFilename()
     if filename and filename.lower().endswith(".scc"):
         editor.setMouseDwellTime(300)
@@ -858,45 +718,54 @@ def on_buffer_activated(args):
             console.writeError("ERROR: Failed to read file: {0}\n".format(e))
             return
 
-        # Check if content changed since last render
         buffer_id = notepad.getCurrentBufferID()
         current_hash = hash(file_text)
-        content_changed = buffer_content_hash.get(buffer_id) != current_hash
 
+        # Check if we have cached state for this buffer with matching hash
+        cached = buffer_state.get(buffer_id)
+        if cached and cached.get("hash") == current_hash:
+            # Content unchanged - just reapply indicators from cache
+            setup_indicators()
+            apply_all_indicators(
+                cached["frame_rate"],
+                cached["time_map"],
+                cached["timestamp_map"],
+                cached["line_texts"],
+            )
+            return
+
+        # Content changed or new buffer - compute everything
         frame_rate, _ = detect_frame_rate(file_text)
 
         if frame_rate == "INVALID":
             console.write("ERROR: Invalid frame rate detected. Timecode math disabled.\n")
-            detected_frame_rate = None
+            frame_rate = None
         else:
             console.write("Detected Frame Rate: {0}\n".format(frame_rate))
-            detected_frame_rate = frame_rate
 
-        timestamp_map_cache = None  # Clear cache on file load
-        line_texts_cache = None
+        time_map, timestamp_map, line_texts = build_time_map(frame_rate)
 
-        if content_changed:
-            # Save scroll position (document line)
-            first_visible_line = editor.docLineFromVisible(editor.firstVisibleLine)
+        # Cache the computed state
+        buffer_state[buffer_id] = {
+            "hash": current_hash,
+            "frame_rate": frame_rate,
+            "time_map": time_map,
+            "timestamp_map": timestamp_map,
+            "line_texts": line_texts,
+        }
 
-            buffer_content_hash[buffer_id] = current_hash
-            setup_indicators()
-            apply_all_indicators()
-
-            # Restore scroll position
-            editor.firstVisibleLine = editor.visibleFromDocLine(first_visible_line)
-        else:
-            setup_indicators()
+        setup_indicators()
+        apply_all_indicators(frame_rate, time_map, timestamp_map, line_texts)
     else:
         editor.setMouseDwellTime(10000000)
 
 
 def on_file_closed(args):
-    """Clean up content hash cache when buffer is closed."""
-    global buffer_content_hash
+    """Clean up buffer state cache when buffer is closed."""
+    global buffer_state
     buffer_id = args.get("bufferID")
-    if buffer_id and buffer_id in buffer_content_hash:
-        del buffer_content_hash[buffer_id]
+    if buffer_id and buffer_id in buffer_state:
+        del buffer_state[buffer_id]
 
 
 editor.clearCallbacks([SCINTILLANOTIFICATION.DWELLSTART])

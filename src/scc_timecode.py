@@ -3,11 +3,12 @@
 SCC Timecode Module
 
 Timecode parsing, arithmetic, and validation for SCC files.
-Handles frame rate detection and cadence calculations for 23.98, 25, and 29.97 DF/NDF.
+Uses frame rate configuration from scc-core/data/frame_rates.json.
 """
 
 from collections import namedtuple
 from scc_decoder import TIMESTAMP_PATTERN
+from scc_data import FRAME_RATES, DROP_FRAME_RULES, DETECTION_RULES, get_frame_rate_config
 
 Timestamp = namedtuple("Timestamp", ["hours", "minutes", "seconds", "frames"])
 
@@ -19,18 +20,19 @@ def parse_timestamp_str(ts_str):
 
 
 def add_frames(hh, mm, ss, ff, packet_offset, frame_rate_str):
-    """Add packet offset to timestamp, accounting for frame rate cadence."""
-    if frame_rate_str not in ("23.98", "25", "29.97 DF", "29.97 NDF"):
-        raise ValueError("Invalid frame rate: {0}".format(frame_rate_str))
-    video_fps = 24 if frame_rate_str == "23.98" else 25 if frame_rate_str == "25" else 30
-    is_df = frame_rate_str == "29.97 DF"
+    """Add packet offset to timestamp, accounting for frame rate cadence.
 
-    if frame_rate_str == "23.98":
-        # 5 packets -> 4 frames: packets 0,1,2,3,4 -> frames 0,1,2,3,3
-        frame_offset = (packet_offset // 5) * 4 + min(packet_offset % 5, 3)
-    elif frame_rate_str == "25":
-        # 6 packets -> 5 frames: packets 0,1,2,3,4,5 -> frames 0,1,2,3,4,4
-        frame_offset = (packet_offset // 6) * 5 + min(packet_offset % 6, 4)
+    Uses frame rate configuration loaded from frame_rates.json.
+    """
+    config = get_frame_rate_config(frame_rate_str)
+    video_fps = config['videoFps']
+    is_df = config['isDropFrame']
+    cadence = config.get('cadence')
+
+    if cadence:
+        packets_per_cycle = cadence['packets']
+        frames_per_cycle = cadence['frames']
+        frame_offset = (packet_offset // packets_per_cycle) * frames_per_cycle + min(packet_offset % packets_per_cycle, frames_per_cycle - 1)
     else:
         frame_offset = packet_offset
 
@@ -54,32 +56,39 @@ def add_frames(hh, mm, ss, ff, packet_offset, frame_rate_str):
 
 
 def detect_frame_rate(file_text):
-    """Detect frame rate from SCC file by analyzing timestamps."""
+    """Detect frame rate from SCC file by analyzing timestamps.
+
+    Uses detection rules from frame_rates.json.
+    """
     max_frame = 0
     has_drop_frame = False
     count = 0
+    sample_limit = DETECTION_RULES['sampleLimit']
+    drop_frame_sep = DETECTION_RULES['dropFrameSeparator']
+    invalid_threshold = DETECTION_RULES['invalidFrameThreshold']
 
     for match in TIMESTAMP_PATTERN.finditer(file_text):
-        if count >= 50:
+        if count >= sample_limit:
             break
         count += 1
         ts = match.group(0)
-        if ";" in ts:
+        if drop_frame_sep in ts:
             has_drop_frame = True
         frame = int(ts[-2:])
-        if frame > 29:
+        if frame > invalid_threshold:
             return "INVALID", count
         if frame > max_frame:
             max_frame = frame
 
     if has_drop_frame:
         rate = "29.97 DF"
-    elif max_frame <= 23:
-        rate = "23.98"
-    elif max_frame == 24:
-        rate = "25"
     else:
-        rate = "29.97 NDF"
+        if max_frame <= 23:
+            rate = "23.98"
+        elif max_frame == 24:
+            rate = "25"
+        else:
+            rate = "29.97 NDF"
 
     return rate, count
 
@@ -120,7 +129,6 @@ def packet_difference(ts1_str, ts2_str, frame_rate_str):
 
         ts2 = parse_timestamp_str(ts2_str)
 
-        # Binary search to find how many packets from ts2 reach or exceed ts1
         low, high = 0, 10000
         while low < high:
             mid = (low + high + 1) // 2

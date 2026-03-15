@@ -1,0 +1,13 @@
+{
+  "description": "EIA-608 color codes by index",
+  "colors": [
+    "White",
+    "Green",
+    "Blue",
+    "Cyan",
+    "Red",
+    "Yellow",
+    "Magenta",
+    "Italics"
+  ]
+}

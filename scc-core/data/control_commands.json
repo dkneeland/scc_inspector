@@ -1,0 +1,67 @@
+{
+  "description": "EIA-608 control commands",
+  "commands": {
+    "0x20": {
+      "name": "Resume Caption Loading",
+      "description": "Resume Caption Loading (RCL)"
+    },
+    "0x21": {
+      "name": "Backspace",
+      "description": "Backspace"
+    },
+    "0x24": {
+      "name": "Delete to End of Row",
+      "description": "Delete to End of Row (DER)"
+    },
+    "0x25": {
+      "name": "Roll-Up 2 Lines",
+      "description": "Roll-Up 2 Lines (RU2)"
+    },
+    "0x26": {
+      "name": "Roll-Up 3 Lines",
+      "description": "Roll-Up 3 Lines (RU3)"
+    },
+    "0x27": {
+      "name": "Roll-Up 4 Lines",
+      "description": "Roll-Up 4 Lines (RU4)"
+    },
+    "0x28": {
+      "name": "Flash ON",
+      "description": "Flash ON (FON)"
+    },
+    "0x29": {
+      "name": "Resume Direct Captioning",
+      "description": "Resume Direct Captioning (RDC)"
+    },
+    "0x2a": {
+      "name": "Text Restart",
+      "description": "Text Restart (TR)"
+    },
+    "0x2b": {
+      "name": "Resume Text Display",
+      "description": "Resume Text Display (RTD)"
+    },
+    "0x2c": {
+      "name": "Clear Screen",
+      "description": "Clear Screen (EDM)"
+    },
+    "0x2d": {
+      "name": "Carriage Return",
+      "description": "Carriage Return (CR)"
+    },
+    "0x2e": {
+      "name": "Erase Non-Displayed Memory",
+      "description": "Erase Non-Displayed Memory (ENM)"
+    },
+    "0x2f": {
+      "name": "Display Caption",
+      "description": "Display Caption (EOC)"
+    }
+  },
+  "channelPrefixes": {
+    "1": "94",
+    "2": "1c",
+    "3": "15",
+    "4": "9d"
+  }
+}
