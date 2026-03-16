@@ -13,13 +13,13 @@ A Notepad++ plugin for analyzing and debugging SCC (Scenarist Closed Caption) fi
 
 ## Screenshots
 
-![SCC Inspector in action](images/screenshot-main.png)
+![SCC Inspector in action](images/screenshot-main.png)\
 *Real-time syntax highlighting and inline caption annotations*
 
-![Tooltip details](images/screenshot-tooltip.png)
+![Tooltip details](images/screenshot-tooltip.png)\
 *Hover tooltips show decoded commands, timestamps, and buffer state*
 
-![Error summary](images/screenshot-error.png)
+![Error summary](images/screenshot-error.png)\
 *Error summary annotation displayed at the top of the file on load*
 
 ## Limitations
@@ -41,28 +41,41 @@ scc_inspector/
 ├── scc_inspector.py          # Main plugin script (Notepad++ entry point)
 ├── src/                       # Library modules
 │   ├── __init__.py
+│   ├── scc_data.py            # Loads shared EIA-608 data from JSON
 │   ├── scc_decoder.py         # SCC code parsing, decoding, and buffer helpers
 │   ├── scc_buffer_format.py   # Fast annotation rendering
 │   ├── scc_timecode.py        # Timecode calculations
 │   └── scc_tooltip.py         # Tooltip formatting
+├── scc-core/                  # Shared EIA-608 data and test cases
+│   ├── data/                  # JSON data files (single source of truth)
+│   │   ├── char_map.json      # EIA-608 character mapping
+│   │   ├── colors.json        # Caption color definitions
+│   │   ├── control_commands.json  # Control command definitions
+│   │   ├── frame_rates.json   # Frame rate configurations
+│   │   ├── parity_table.json  # Valid odd-parity bytes
+│   │   └── row_map.json       # PAC row index mapping
+│   └── test-cases/            # JSON-driven test cases
+│       ├── decoder_cases.json
+│       ├── control_commands_cases.json
+│       ├── timecode_cases.json
+│       ├── parity_cases.json
+│       └── event_time_cases.json
 ├── tests/                     # Test suite
-│   ├── __init__.py
 │   ├── run_tests.py           # Primary test runner
-│   ├── test_all.py            # Main test suite
-│   ├── test_buffer.py         # Buffer creation tests
-│   ├── test_control_commands.py  # Control command tests
+│   ├── test_all.py            # JSON-driven main test suite
+│   ├── test_buffer.py         # Buffer and tooltip tests
 │   ├── test_overflow.py       # CC buffer overflow tests
 │   └── debug_buffer.py        # Interactive debugging tool
+├── samples/                   # Sample SCC files
 ├── SCC.xml                    # Notepad++ User Defined Language (UDL)
 └── reference/                 # Reference documentation
-    └── ...
 ```
 
 ## Installation
 
 1. Install the Python Script plugin in Notepad++ (Plugins > Plugins Admin > Python Script)
 2. Clone or download this repository
-3. Copy `scc_inspector.py` and the `src/` directory to your Notepad++ Python Scripts folder:
+3. Copy `scc_inspector.py`, the `src/` directory, and the `scc-core/` directory to your Notepad++ Python Scripts folder:
    - Usually located at: `%APPDATA%\Notepad++\plugins\config\PythonScript\scripts\`
 4. Restart Notepad++
 5. Run the plugin: Plugins > Python Script > Scripts > scc_inspector
@@ -149,13 +162,12 @@ python tests\run_tests.py
 # Or run individual test suites
 python tests\test_all.py
 python tests\test_buffer.py
-python tests\test_control_commands.py
 python tests\test_overflow.py
 ```
 
 ## Development
 
-The main plugin script (`scc_inspector.py`) imports library modules from the `src/` directory. All supporting code is organized in `src/`, keeping the root clean and following Python best practices.
+The main plugin script (`scc_inspector.py`) imports library modules from `src/`. All EIA-608 data (character maps, control commands, frame rates, etc.) is centralized in JSON files under `scc-core/data/`, serving as a single source of truth shared with other implementations. Test cases in `scc-core/test-cases/` are also JSON-driven and shared.
 
 ### Code Formatting
 
