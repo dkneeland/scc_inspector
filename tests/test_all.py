@@ -126,17 +126,16 @@ sys.modules["Npp"].ANNOTATIONVISIBLE = type("obj", (object,), {"BOXED": 0})
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, parent_dir)
 
-import scc_inspector
-from scc_decoder import (
+from scc_decoder import (  # noqa: E402
     parse_scc_code,
     decode_single_code,
     iter_hex_words,
     is_pairing_command,
     HEX_PATTERN,
 )
-from scc_timecode import parse_timestamp_str, add_frames, detect_frame_rate, validate_timestamp
-from scc_inspector import build_time_map, decode_full_line, find_errors
-from Npp import editor
+from scc_timecode import parse_timestamp_str, add_frames, detect_frame_rate, validate_timestamp  # noqa: E402
+from scc_inspector import build_time_map, decode_full_line, find_errors  # noqa: E402
+from Npp import editor  # noqa: E402
 
 TEST_CASES_DIR = os.path.join(parent_dir, "scc-core", "test-cases")
 
@@ -474,7 +473,7 @@ def test_special_na_backspace():
                 return False
             if evt.get("is_extended", False) != case["isExtended"]:
                 return False
-            if case["isExtended"] != False:
+            if case["isExtended"]:
                 return False
     return True
 
@@ -490,7 +489,7 @@ def test_westeu_backspace():
                 return False
             if evt.get("is_extended", False) != case["isExtended"]:
                 return False
-            if case["isExtended"] != True:
+            if not case["isExtended"]:
                 return False
     return True
 

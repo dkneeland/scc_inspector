@@ -8,7 +8,7 @@ Uses frame rate configuration from scc-core/data/frame_rates.json.
 
 from collections import namedtuple
 from scc_decoder import TIMESTAMP_PATTERN
-from scc_data import FRAME_RATES, DROP_FRAME_RULES, DETECTION_RULES, get_frame_rate_config
+from scc_data import DETECTION_RULES, get_frame_rate_config
 
 Timestamp = namedtuple("Timestamp", ["hours", "minutes", "seconds", "frames"])
 
