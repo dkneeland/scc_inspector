@@ -1,0 +1,59 @@
+{
+  "event_times": [
+    {
+      "name": "942f then 942c same line",
+      "lines": [
+        "00:01:01;03\t9420 94ae c4e9 942f 942c"
+      ],
+      "startLine": 0,
+      "frameRate": "29.97 DF",
+      "expectedStart": "00:01:01;06",
+      "expectedEnd": "00:01:01;07"
+    },
+    {
+      "name": "942f then 942c next line",
+      "lines": [
+        "00:01:01;03\t9420 94ae c4e9 942f",
+        "00:01:02;09\t942c"
+      ],
+      "startLine": 0,
+      "frameRate": "29.97 DF",
+      "expectedStart": "00:01:01;06",
+      "expectedEnd": "00:01:02;09"
+    },
+    {
+      "name": "User example 942f at end",
+      "lines": [
+        "00:05:55:12\t94ae 94ae 9420 9420 94d6 94d6 97a2 97a2 c8e5 792c 9470 9470 d3ef 2049 20f7 6173 20f4 68e9 6e6b e96e 6720 f468 e973 206d eff2 6e67 2c80 942f 942f",
+        "00:05:58:15\t942c 942c"
+      ],
+      "startLine": 0,
+      "frameRate": "23.98",
+      "expectedStart": "00:05:56:06",
+      "expectedEnd": "00:05:58:15"
+    },
+    {
+      "name": "No text returns None",
+      "lines": [
+        "00:01:00:00\t9420 9420 942f",
+        "00:01:01:00\t9420 9420 942c"
+      ],
+      "startLine": 0,
+      "frameRate": "23.98",
+      "expectedStart": null,
+      "expectedEnd": null
+    },
+    {
+      "name": "EOC before content on same line",
+      "lines": [
+        "00:00:00:00\t9420 9420 942c 942f 9420 94d6 5b49 dad5 cbd5 5d80 94f2 97a2 57e5 ece3 ef6d e520 f4ef 20d5 c120 c8e9 6768 ae80",
+        "00:00:01:07\t9420 942c 942f 9420 94d0 9723 496e 2061 20f7 eff2 ec64 20f7 68e5 f2e5 2061 62ef 75f4 2038 b080 9470 9723 70e5 f2e3 e56e f420 efe6 20f4 68e5 2070 ef70 75ec 61f4 e9ef 6e80",
+        "00:00:03:08\t9420 942c 942f 9420 94d0 97a2 6861 7320 73ef 6de5 206b e96e 6420 efe6 2073 7570 e5f2 70ef f7e5 f280 94f2 9723 e361 ecec e564 2061 20a2 5175 e9f2 6b2c a280"
+      ],
+      "startLine": 0,
+      "frameRate": "29.97 NDF",
+      "expectedStart": "00:00:01:09",
+      "expectedEnd": "00:00:03:09"
+    }
+  ]
+}

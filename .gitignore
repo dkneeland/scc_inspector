@@ -3,6 +3,9 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Claude AI tool config
+.claude/
+
 # C extensions
 *.so
 

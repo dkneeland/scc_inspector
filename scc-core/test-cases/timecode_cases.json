@@ -1,0 +1,372 @@
+{
+  "parse_timestamp": [
+    {
+      "input": "00:00:00:00",
+      "expected": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "input": "01:23:45:12",
+      "expected": [
+        1,
+        23,
+        45,
+        12
+      ]
+    },
+    {
+      "input": "00:00:00;00",
+      "expected": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "input": "01:00:00;02",
+      "expected": [
+        1,
+        0,
+        0,
+        2
+      ]
+    }
+  ],
+  "add_frames": {
+    "29.97 NDF": [
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 0,
+        "expectedTc": "00:00:00:00",
+        "expectedOffset": 0
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 1,
+        "expectedTc": "00:00:00:01",
+        "expectedOffset": 1
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 30,
+        "expectedTc": "00:00:01:00",
+        "expectedOffset": 30
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 29,
+        "offset": 1,
+        "expectedTc": "00:00:01:00",
+        "expectedOffset": 1
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 59,
+        "ff": 29,
+        "offset": 1,
+        "expectedTc": "00:01:00:00",
+        "expectedOffset": 1
+      },
+      {
+        "hh": 0,
+        "mm": 59,
+        "ss": 59,
+        "ff": 29,
+        "offset": 1,
+        "expectedTc": "01:00:00:00",
+        "expectedOffset": 1
+      }
+    ],
+    "29.97 DF": [
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 0,
+        "expectedTc": "00:00:00;00",
+        "expectedOffset": 0
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 1,
+        "expectedTc": "00:00:00;01",
+        "expectedOffset": 1
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 59,
+        "ff": 29,
+        "offset": 1,
+        "expectedTc": "00:01:00;02",
+        "expectedOffset": 1
+      },
+      {
+        "hh": 0,
+        "mm": 1,
+        "ss": 59,
+        "ff": 29,
+        "offset": 1,
+        "expectedTc": "00:02:00;02",
+        "expectedOffset": 1
+      },
+      {
+        "hh": 0,
+        "mm": 9,
+        "ss": 59,
+        "ff": 29,
+        "offset": 1,
+        "expectedTc": "00:10:00;00",
+        "expectedOffset": 1
+      },
+      {
+        "hh": 0,
+        "mm": 19,
+        "ss": 59,
+        "ff": 29,
+        "offset": 1,
+        "expectedTc": "00:20:00;00",
+        "expectedOffset": 1
+      }
+    ],
+    "23.98": [
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 0,
+        "expectedTc": "00:00:00:00",
+        "expectedOffset": 0
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 1,
+        "expectedTc": "00:00:00:01",
+        "expectedOffset": 1
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 2,
+        "expectedTc": "00:00:00:02",
+        "expectedOffset": 2
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 3,
+        "expectedTc": "00:00:00:03",
+        "expectedOffset": 3
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 4,
+        "expectedTc": "00:00:00:03",
+        "expectedOffset": 3
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 5,
+        "expectedTc": "00:00:00:04",
+        "expectedOffset": 4
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 9,
+        "expectedTc": "00:00:00:07",
+        "expectedOffset": 7
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 10,
+        "expectedTc": "00:00:00:08",
+        "expectedOffset": 8
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 120,
+        "expectedTc": "00:00:04:00",
+        "expectedOffset": 96
+      }
+    ],
+    "25": [
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 0,
+        "expectedTc": "00:00:00:00",
+        "expectedOffset": 0
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 1,
+        "expectedTc": "00:00:00:01",
+        "expectedOffset": 1
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 2,
+        "expectedTc": "00:00:00:02",
+        "expectedOffset": 2
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 3,
+        "expectedTc": "00:00:00:03",
+        "expectedOffset": 3
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 4,
+        "expectedTc": "00:00:00:04",
+        "expectedOffset": 4
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 5,
+        "expectedTc": "00:00:00:04",
+        "expectedOffset": 4
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 6,
+        "expectedTc": "00:00:00:05",
+        "expectedOffset": 5
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 11,
+        "expectedTc": "00:00:00:09",
+        "expectedOffset": 9
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 12,
+        "expectedTc": "00:00:00:10",
+        "expectedOffset": 10
+      },
+      {
+        "hh": 0,
+        "mm": 0,
+        "ss": 0,
+        "ff": 0,
+        "offset": 150,
+        "expectedTc": "00:00:05:00",
+        "expectedOffset": 125
+      }
+    ]
+  },
+  "validate_timestamp": {
+    "valid": [
+      "00:00:00:00",
+      "23:59:59:29",
+      "01:00:00;02",
+      "12:34:56:12"
+    ],
+    "invalid": [
+      "24:00:00:00",
+      "00:60:00:00",
+      "00:00:60:00",
+      "00:00:00:30",
+      "invalid",
+      "00:00:00"
+    ]
+  },
+  "frame_rate_detection": [
+    {
+      "name": "23.98",
+      "content": "01:00:00:00\n01:00:00:23\n01:00:01:15",
+      "expectedRate": "23.98"
+    },
+    {
+      "name": "25",
+      "content": "01:00:00:00\n01:00:00:24\n01:00:01:20",
+      "expectedRate": "25"
+    },
+    {
+      "name": "29.97 DF",
+      "content": "01:00:00;00\n01:00:00;29\n01:00:01;15",
+      "expectedRate": "29.97 DF"
+    },
+    {
+      "name": "29.97 NDF",
+      "content": "01:00:00:00\n01:00:00:29\n01:00:01:25",
+      "expectedRate": "29.97 NDF"
+    },
+    {
+      "name": "INVALID",
+      "content": "01:00:00:00\n01:00:00:30\n01:00:01:15",
+      "expectedRate": "INVALID"
+    }
+  ]
+}

@@ -1,0 +1,378 @@
+{
+  "control_commands": [
+    {
+      "input": "9420",
+      "expectedType": "CONTROL",
+      "expectedName": "Resume Caption Loading (RCL)",
+      "channel": "CC1"
+    },
+    {
+      "input": "9429",
+      "expectedType": "CONTROL",
+      "expectedName": "Resume Direct Captioning (RDC)",
+      "channel": "CC1"
+    },
+    {
+      "input": "9425",
+      "expectedType": "CONTROL",
+      "expectedName": "Roll-Up 2 Lines (RU2)",
+      "channel": "CC1"
+    },
+    {
+      "input": "9426",
+      "expectedType": "CONTROL",
+      "expectedName": "Roll-Up 3 Lines (RU3)",
+      "channel": "CC1"
+    },
+    {
+      "input": "94a7",
+      "expectedType": "CONTROL",
+      "expectedName": "Roll-Up 4 Lines (RU4)",
+      "channel": "CC1"
+    },
+    {
+      "input": "942a",
+      "expectedType": "CONTROL",
+      "expectedName": "Text Restart (TR)",
+      "channel": "CC1"
+    },
+    {
+      "input": "94ab",
+      "expectedType": "CONTROL",
+      "expectedName": "Resume Text Display (RTD)",
+      "channel": "CC1"
+    },
+    {
+      "input": "942c",
+      "expectedType": "CONTROL",
+      "expectedName": "Clear Screen (EDM)",
+      "channel": "CC1"
+    },
+    {
+      "input": "94ae",
+      "expectedType": "CONTROL",
+      "expectedName": "Erase Non-Displayed Memory (ENM)",
+      "channel": "CC1"
+    },
+    {
+      "input": "942f",
+      "expectedType": "CONTROL",
+      "expectedName": "Display Caption (EOC)",
+      "channel": "CC1"
+    },
+    {
+      "input": "94a1",
+      "expectedType": "CONTROL",
+      "expectedName": "Backspace",
+      "channel": "CC1"
+    },
+    {
+      "input": "94a4",
+      "expectedType": "CONTROL",
+      "expectedName": "Delete to End of Row (DER)",
+      "channel": "CC1"
+    },
+    {
+      "input": "94ad",
+      "expectedType": "CONTROL",
+      "expectedName": "Carriage Return (CR)",
+      "channel": "CC1"
+    },
+    {
+      "input": "94a8",
+      "expectedType": "CONTROL",
+      "expectedName": "Flash ON (FON)",
+      "channel": "CC1"
+    },
+    {
+      "input": "1c20",
+      "expectedType": "CONTROL",
+      "expectedName": "Resume Caption Loading (RCL)",
+      "channel": "CC2"
+    },
+    {
+      "input": "1c29",
+      "expectedType": "CONTROL",
+      "expectedName": "Resume Direct Captioning (RDC)",
+      "channel": "CC2"
+    },
+    {
+      "input": "1c25",
+      "expectedType": "CONTROL",
+      "expectedName": "Roll-Up 2 Lines (RU2)",
+      "channel": "CC2"
+    },
+    {
+      "input": "1c26",
+      "expectedType": "CONTROL",
+      "expectedName": "Roll-Up 3 Lines (RU3)",
+      "channel": "CC2"
+    },
+    {
+      "input": "1ca7",
+      "expectedType": "CONTROL",
+      "expectedName": "Roll-Up 4 Lines (RU4)",
+      "channel": "CC2"
+    },
+    {
+      "input": "1c2a",
+      "expectedType": "CONTROL",
+      "expectedName": "Text Restart (TR)",
+      "channel": "CC2"
+    },
+    {
+      "input": "1cab",
+      "expectedType": "CONTROL",
+      "expectedName": "Resume Text Display (RTD)",
+      "channel": "CC2"
+    },
+    {
+      "input": "1c2c",
+      "expectedType": "CONTROL",
+      "expectedName": "Clear Screen (EDM)",
+      "channel": "CC2"
+    },
+    {
+      "input": "1cae",
+      "expectedType": "CONTROL",
+      "expectedName": "Erase Non-Displayed Memory (ENM)",
+      "channel": "CC2"
+    },
+    {
+      "input": "1c2f",
+      "expectedType": "CONTROL",
+      "expectedName": "Display Caption (EOC)",
+      "channel": "CC2"
+    },
+    {
+      "input": "1ca1",
+      "expectedType": "CONTROL",
+      "expectedName": "Backspace",
+      "channel": "CC2"
+    },
+    {
+      "input": "1ca4",
+      "expectedType": "CONTROL",
+      "expectedName": "Delete to End of Row (DER)",
+      "channel": "CC2"
+    },
+    {
+      "input": "1cad",
+      "expectedType": "CONTROL",
+      "expectedName": "Carriage Return (CR)",
+      "channel": "CC2"
+    },
+    {
+      "input": "1ca8",
+      "expectedType": "CONTROL",
+      "expectedName": "Flash ON (FON)",
+      "channel": "CC2"
+    },
+    {
+      "input": "1520",
+      "expectedType": "CONTROL",
+      "expectedName": "Resume Caption Loading (RCL)",
+      "channel": "CC3"
+    },
+    {
+      "input": "1529",
+      "expectedType": "CONTROL",
+      "expectedName": "Resume Direct Captioning (RDC)",
+      "channel": "CC3"
+    },
+    {
+      "input": "1525",
+      "expectedType": "CONTROL",
+      "expectedName": "Roll-Up 2 Lines (RU2)",
+      "channel": "CC3"
+    },
+    {
+      "input": "1526",
+      "expectedType": "CONTROL",
+      "expectedName": "Roll-Up 3 Lines (RU3)",
+      "channel": "CC3"
+    },
+    {
+      "input": "15a7",
+      "expectedType": "CONTROL",
+      "expectedName": "Roll-Up 4 Lines (RU4)",
+      "channel": "CC3"
+    },
+    {
+      "input": "152a",
+      "expectedType": "CONTROL",
+      "expectedName": "Text Restart (TR)",
+      "channel": "CC3"
+    },
+    {
+      "input": "15ab",
+      "expectedType": "CONTROL",
+      "expectedName": "Resume Text Display (RTD)",
+      "channel": "CC3"
+    },
+    {
+      "input": "152c",
+      "expectedType": "CONTROL",
+      "expectedName": "Clear Screen (EDM)",
+      "channel": "CC3"
+    },
+    {
+      "input": "15ae",
+      "expectedType": "CONTROL",
+      "expectedName": "Erase Non-Displayed Memory (ENM)",
+      "channel": "CC3"
+    },
+    {
+      "input": "152f",
+      "expectedType": "CONTROL",
+      "expectedName": "Display Caption (EOC)",
+      "channel": "CC3"
+    },
+    {
+      "input": "15a1",
+      "expectedType": "CONTROL",
+      "expectedName": "Backspace",
+      "channel": "CC3"
+    },
+    {
+      "input": "15a4",
+      "expectedType": "CONTROL",
+      "expectedName": "Delete to End of Row (DER)",
+      "channel": "CC3"
+    },
+    {
+      "input": "15ad",
+      "expectedType": "CONTROL",
+      "expectedName": "Carriage Return (CR)",
+      "channel": "CC3"
+    },
+    {
+      "input": "15a8",
+      "expectedType": "CONTROL",
+      "expectedName": "Flash ON (FON)",
+      "channel": "CC3"
+    },
+    {
+      "input": "9d20",
+      "expectedType": "CONTROL",
+      "expectedName": "Resume Caption Loading (RCL)",
+      "channel": "CC4"
+    },
+    {
+      "input": "9d29",
+      "expectedType": "CONTROL",
+      "expectedName": "Resume Direct Captioning (RDC)",
+      "channel": "CC4"
+    },
+    {
+      "input": "9d25",
+      "expectedType": "CONTROL",
+      "expectedName": "Roll-Up 2 Lines (RU2)",
+      "channel": "CC4"
+    },
+    {
+      "input": "9d26",
+      "expectedType": "CONTROL",
+      "expectedName": "Roll-Up 3 Lines (RU3)",
+      "channel": "CC4"
+    },
+    {
+      "input": "9da7",
+      "expectedType": "CONTROL",
+      "expectedName": "Roll-Up 4 Lines (RU4)",
+      "channel": "CC4"
+    },
+    {
+      "input": "9d2a",
+      "expectedType": "CONTROL",
+      "expectedName": "Text Restart (TR)",
+      "channel": "CC4"
+    },
+    {
+      "input": "9dab",
+      "expectedType": "CONTROL",
+      "expectedName": "Resume Text Display (RTD)",
+      "channel": "CC4"
+    },
+    {
+      "input": "9d2c",
+      "expectedType": "CONTROL",
+      "expectedName": "Clear Screen (EDM)",
+      "channel": "CC4"
+    },
+    {
+      "input": "9dae",
+      "expectedType": "CONTROL",
+      "expectedName": "Erase Non-Displayed Memory (ENM)",
+      "channel": "CC4"
+    },
+    {
+      "input": "9d2f",
+      "expectedType": "CONTROL",
+      "expectedName": "Display Caption (EOC)",
+      "channel": "CC4"
+    },
+    {
+      "input": "9da1",
+      "expectedType": "CONTROL",
+      "expectedName": "Backspace",
+      "channel": "CC4"
+    },
+    {
+      "input": "9da4",
+      "expectedType": "CONTROL",
+      "expectedName": "Delete to End of Row (DER)",
+      "channel": "CC4"
+    },
+    {
+      "input": "9dad",
+      "expectedType": "CONTROL",
+      "expectedName": "Carriage Return (CR)",
+      "channel": "CC4"
+    },
+    {
+      "input": "9da8",
+      "expectedType": "CONTROL",
+      "expectedName": "Flash ON (FON)",
+      "channel": "CC4"
+    }
+  ],
+  "tab_offsets": [
+    {
+      "input": "97a1",
+      "expectedType": "INDENT",
+      "expectedSpaces": 1,
+      "description": "Tab Offset 1 column (TO1)"
+    },
+    {
+      "input": "1fa1",
+      "expectedType": "INDENT",
+      "expectedSpaces": 1,
+      "description": "Tab Offset 1 column (TO1)"
+    },
+    {
+      "input": "97a2",
+      "expectedType": "INDENT",
+      "expectedSpaces": 2,
+      "description": "Tab Offset 2 columns (TO2)"
+    },
+    {
+      "input": "1fa2",
+      "expectedType": "INDENT",
+      "expectedSpaces": 2,
+      "description": "Tab Offset 2 columns (TO2)"
+    },
+    {
+      "input": "9723",
+      "expectedType": "INDENT",
+      "expectedSpaces": 3,
+      "description": "Tab Offset 3 columns (TO3)"
+    },
+    {
+      "input": "1f23",
+      "expectedType": "INDENT",
+      "expectedSpaces": 3,
+      "description": "Tab Offset 3 columns (TO3)"
+    }
+  ]
+}

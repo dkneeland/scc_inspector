@@ -1,0 +1,69 @@
+{
+  "odd_parity_bytes": [
+    1,
+    2,
+    4,
+    7,
+    8,
+    11,
+    13,
+    14,
+    16,
+    19,
+    148,
+    32,
+    128
+  ],
+  "even_parity_bytes": [
+    0,
+    3,
+    5,
+    6,
+    9,
+    10,
+    12,
+    15,
+    17,
+    18,
+    255
+  ],
+  "valid_scc_codes": [
+    "9420",
+    "942f",
+    "942c",
+    "94ae",
+    "8080",
+    "c1c2",
+    "c845"
+  ],
+  "invalid_scc_codes": [
+    {
+      "code": "9520",
+      "shouldHaveError": true
+    },
+    {
+      "code": "9421",
+      "shouldHaveError": true
+    },
+    {
+      "code": "0020",
+      "shouldHaveError": true
+    },
+    {
+      "code": "FF20",
+      "shouldHaveError": true
+    }
+  ],
+  "error_position": {
+    "line": "00:00:01:00 9520 9420",
+    "expectedErrorCode": "9520",
+    "expectedErrorCount": 1
+  },
+  "priority_tests": [
+    {
+      "input": "FFFF",
+      "expectedErrorType": "parity_error",
+      "description": "FFFF should produce parity_error, not invalid"
+    }
+  ]
+}

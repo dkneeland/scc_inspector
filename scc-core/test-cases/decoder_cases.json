@@ -1,0 +1,1008 @@
+{
+  "standard_characters": [
+    {
+      "input": "a1a1",
+      "expectedType": "TEXT",
+      "expectedText": "!!",
+      "description": "Standard char: !"
+    },
+    {
+      "input": "a2a2",
+      "expectedType": "TEXT",
+      "expectedText": "\"\"",
+      "description": "Standard char: \""
+    },
+    {
+      "input": "a4a4",
+      "expectedType": "TEXT",
+      "expectedText": "$$",
+      "description": "Standard char: $"
+    },
+    {
+      "input": "a7a7",
+      "expectedType": "TEXT",
+      "expectedText": "''",
+      "description": "Standard char: '"
+    },
+    {
+      "input": "a8a8",
+      "expectedType": "TEXT",
+      "expectedText": "((",
+      "description": "Standard char: ("
+    },
+    {
+      "input": "abab",
+      "expectedType": "TEXT",
+      "expectedText": "++",
+      "description": "Standard char: +"
+    },
+    {
+      "input": "adad",
+      "expectedType": "TEXT",
+      "expectedText": "--",
+      "description": "Standard char: -"
+    },
+    {
+      "input": "aeae",
+      "expectedType": "TEXT",
+      "expectedText": "..",
+      "description": "Standard char: ."
+    },
+    {
+      "input": "b0b0",
+      "expectedType": "TEXT",
+      "expectedText": "00",
+      "description": "Standard char: 0"
+    },
+    {
+      "input": "b3b3",
+      "expectedType": "TEXT",
+      "expectedText": "33",
+      "description": "Standard char: 3"
+    },
+    {
+      "input": "b5b5",
+      "expectedType": "TEXT",
+      "expectedText": "55",
+      "description": "Standard char: 5"
+    },
+    {
+      "input": "b6b6",
+      "expectedType": "TEXT",
+      "expectedText": "66",
+      "description": "Standard char: 6"
+    },
+    {
+      "input": "b9b9",
+      "expectedType": "TEXT",
+      "expectedText": "99",
+      "description": "Standard char: 9"
+    },
+    {
+      "input": "baba",
+      "expectedType": "TEXT",
+      "expectedText": "::",
+      "description": "Standard char: :"
+    },
+    {
+      "input": "bcbc",
+      "expectedType": "TEXT",
+      "expectedText": "<<",
+      "description": "Standard char: <"
+    },
+    {
+      "input": "bfbf",
+      "expectedType": "TEXT",
+      "expectedText": "??",
+      "description": "Standard char: ?"
+    },
+    {
+      "input": "c1c1",
+      "expectedType": "TEXT",
+      "expectedText": "AA",
+      "description": "Standard char: A"
+    },
+    {
+      "input": "c2c2",
+      "expectedType": "TEXT",
+      "expectedText": "BB",
+      "description": "Standard char: B"
+    },
+    {
+      "input": "c4c4",
+      "expectedType": "TEXT",
+      "expectedText": "DD",
+      "description": "Standard char: D"
+    },
+    {
+      "input": "c7c7",
+      "expectedType": "TEXT",
+      "expectedText": "GG",
+      "description": "Standard char: G"
+    },
+    {
+      "input": "c8c8",
+      "expectedType": "TEXT",
+      "expectedText": "HH",
+      "description": "Standard char: H"
+    },
+    {
+      "input": "cbcb",
+      "expectedType": "TEXT",
+      "expectedText": "KK",
+      "description": "Standard char: K"
+    },
+    {
+      "input": "cdcd",
+      "expectedType": "TEXT",
+      "expectedText": "MM",
+      "description": "Standard char: M"
+    },
+    {
+      "input": "cece",
+      "expectedType": "TEXT",
+      "expectedText": "NN",
+      "description": "Standard char: N"
+    },
+    {
+      "input": "d0d0",
+      "expectedType": "TEXT",
+      "expectedText": "PP",
+      "description": "Standard char: P"
+    },
+    {
+      "input": "d3d3",
+      "expectedType": "TEXT",
+      "expectedText": "SS",
+      "description": "Standard char: S"
+    },
+    {
+      "input": "d5d5",
+      "expectedType": "TEXT",
+      "expectedText": "UU",
+      "description": "Standard char: U"
+    },
+    {
+      "input": "d6d6",
+      "expectedType": "TEXT",
+      "expectedText": "VV",
+      "description": "Standard char: V"
+    },
+    {
+      "input": "d9d9",
+      "expectedType": "TEXT",
+      "expectedText": "YY",
+      "description": "Standard char: Y"
+    },
+    {
+      "input": "dada",
+      "expectedType": "TEXT",
+      "expectedText": "ZZ",
+      "description": "Standard char: Z"
+    },
+    {
+      "input": "dcdc",
+      "expectedType": "TEXT",
+      "expectedText": "éé",
+      "description": "Standard char: é"
+    },
+    {
+      "input": "dfdf",
+      "expectedType": "TEXT",
+      "expectedText": "óó",
+      "description": "Standard char: ó"
+    },
+    {
+      "input": "e0e0",
+      "expectedType": "TEXT",
+      "expectedText": "úú",
+      "description": "Standard char: ú"
+    },
+    {
+      "input": "e3e3",
+      "expectedType": "TEXT",
+      "expectedText": "cc",
+      "description": "Standard char: c"
+    },
+    {
+      "input": "e5e5",
+      "expectedType": "TEXT",
+      "expectedText": "ee",
+      "description": "Standard char: e"
+    },
+    {
+      "input": "e6e6",
+      "expectedType": "TEXT",
+      "expectedText": "ff",
+      "description": "Standard char: f"
+    },
+    {
+      "input": "e9e9",
+      "expectedType": "TEXT",
+      "expectedText": "ii",
+      "description": "Standard char: i"
+    },
+    {
+      "input": "eaea",
+      "expectedType": "TEXT",
+      "expectedText": "jj",
+      "description": "Standard char: j"
+    },
+    {
+      "input": "ecec",
+      "expectedType": "TEXT",
+      "expectedText": "ll",
+      "description": "Standard char: l"
+    },
+    {
+      "input": "efef",
+      "expectedType": "TEXT",
+      "expectedText": "oo",
+      "description": "Standard char: o"
+    },
+    {
+      "input": "f1f1",
+      "expectedType": "TEXT",
+      "expectedText": "qq",
+      "description": "Standard char: q"
+    },
+    {
+      "input": "f2f2",
+      "expectedType": "TEXT",
+      "expectedText": "rr",
+      "description": "Standard char: r"
+    },
+    {
+      "input": "f4f4",
+      "expectedType": "TEXT",
+      "expectedText": "tt",
+      "description": "Standard char: t"
+    },
+    {
+      "input": "f7f7",
+      "expectedType": "TEXT",
+      "expectedText": "ww",
+      "description": "Standard char: w"
+    },
+    {
+      "input": "f8f8",
+      "expectedType": "TEXT",
+      "expectedText": "xx",
+      "description": "Standard char: x"
+    },
+    {
+      "input": "fbfb",
+      "expectedType": "TEXT",
+      "expectedText": "çç",
+      "description": "Standard char: ç"
+    },
+    {
+      "input": "fdfd",
+      "expectedType": "TEXT",
+      "expectedText": "ÑÑ",
+      "description": "Standard char: Ñ"
+    },
+    {
+      "input": "fefe",
+      "expectedType": "TEXT",
+      "expectedText": "ññ",
+      "description": "Standard char: ñ"
+    }
+  ],
+  "extended_characters": [
+    {
+      "input": "9220",
+      "expectedType": "TEXT",
+      "expectedText": "Á",
+      "isExtended": true,
+      "description": "Extended char: Á"
+    },
+    {
+      "input": "92a1",
+      "expectedType": "TEXT",
+      "expectedText": "É",
+      "isExtended": true,
+      "description": "Extended char: É"
+    },
+    {
+      "input": "92a2",
+      "expectedType": "TEXT",
+      "expectedText": "Ó",
+      "isExtended": true,
+      "description": "Extended char: Ó"
+    },
+    {
+      "input": "9223",
+      "expectedType": "TEXT",
+      "expectedText": "Ú",
+      "isExtended": true,
+      "description": "Extended char: Ú"
+    },
+    {
+      "input": "92a4",
+      "expectedType": "TEXT",
+      "expectedText": "Ü",
+      "isExtended": true,
+      "description": "Extended char: Ü"
+    },
+    {
+      "input": "9225",
+      "expectedType": "TEXT",
+      "expectedText": "ü",
+      "isExtended": true,
+      "description": "Extended char: ü"
+    },
+    {
+      "input": "9226",
+      "expectedType": "TEXT",
+      "expectedText": "‘",
+      "isExtended": true,
+      "description": "Extended char: ‘"
+    },
+    {
+      "input": "92a7",
+      "expectedType": "TEXT",
+      "expectedText": "¡",
+      "isExtended": true,
+      "description": "Extended char: ¡"
+    },
+    {
+      "input": "92a8",
+      "expectedType": "TEXT",
+      "expectedText": "*",
+      "isExtended": true,
+      "description": "Extended char: *"
+    },
+    {
+      "input": "9229",
+      "expectedType": "TEXT",
+      "expectedText": "’",
+      "isExtended": true,
+      "description": "Extended char: ’"
+    },
+    {
+      "input": "922a",
+      "expectedType": "TEXT",
+      "expectedText": "—",
+      "isExtended": true,
+      "description": "Extended char: —"
+    },
+    {
+      "input": "92ab",
+      "expectedType": "TEXT",
+      "expectedText": "©",
+      "isExtended": true,
+      "description": "Extended char: ©"
+    },
+    {
+      "input": "922c",
+      "expectedType": "TEXT",
+      "expectedText": "℠",
+      "isExtended": true,
+      "description": "Extended char: ℠"
+    },
+    {
+      "input": "92ad",
+      "expectedType": "TEXT",
+      "expectedText": "•",
+      "isExtended": true,
+      "description": "Extended char: •"
+    },
+    {
+      "input": "92ae",
+      "expectedType": "TEXT",
+      "expectedText": "“",
+      "isExtended": true,
+      "description": "Extended char: “"
+    },
+    {
+      "input": "922f",
+      "expectedType": "TEXT",
+      "expectedText": "”",
+      "isExtended": true,
+      "description": "Extended char: ”"
+    },
+    {
+      "input": "92b0",
+      "expectedType": "TEXT",
+      "expectedText": "À",
+      "isExtended": true,
+      "description": "Extended char: À"
+    },
+    {
+      "input": "9231",
+      "expectedType": "TEXT",
+      "expectedText": "Â",
+      "isExtended": true,
+      "description": "Extended char: Â"
+    },
+    {
+      "input": "9232",
+      "expectedType": "TEXT",
+      "expectedText": "Ç",
+      "isExtended": true,
+      "description": "Extended char: Ç"
+    },
+    {
+      "input": "92b3",
+      "expectedType": "TEXT",
+      "expectedText": "È",
+      "isExtended": true,
+      "description": "Extended char: È"
+    },
+    {
+      "input": "9234",
+      "expectedType": "TEXT",
+      "expectedText": "Ê",
+      "isExtended": true,
+      "description": "Extended char: Ê"
+    },
+    {
+      "input": "92b5",
+      "expectedType": "TEXT",
+      "expectedText": "Ë",
+      "isExtended": true,
+      "description": "Extended char: Ë"
+    },
+    {
+      "input": "92b6",
+      "expectedType": "TEXT",
+      "expectedText": "ë",
+      "isExtended": true,
+      "description": "Extended char: ë"
+    },
+    {
+      "input": "9237",
+      "expectedType": "TEXT",
+      "expectedText": "Î",
+      "isExtended": true,
+      "description": "Extended char: Î"
+    },
+    {
+      "input": "9238",
+      "expectedType": "TEXT",
+      "expectedText": "Ï",
+      "isExtended": true,
+      "description": "Extended char: Ï"
+    },
+    {
+      "input": "92b9",
+      "expectedType": "TEXT",
+      "expectedText": "ï",
+      "isExtended": true,
+      "description": "Extended char: ï"
+    },
+    {
+      "input": "92ba",
+      "expectedType": "TEXT",
+      "expectedText": "Ô",
+      "isExtended": true,
+      "description": "Extended char: Ô"
+    },
+    {
+      "input": "923b",
+      "expectedType": "TEXT",
+      "expectedText": "Ù",
+      "isExtended": true,
+      "description": "Extended char: Ù"
+    },
+    {
+      "input": "92bc",
+      "expectedType": "TEXT",
+      "expectedText": "ù",
+      "isExtended": true,
+      "description": "Extended char: ù"
+    },
+    {
+      "input": "923d",
+      "expectedType": "TEXT",
+      "expectedText": "Û",
+      "isExtended": true,
+      "description": "Extended char: Û"
+    },
+    {
+      "input": "923e",
+      "expectedType": "TEXT",
+      "expectedText": "«",
+      "isExtended": true,
+      "description": "Extended char: «"
+    },
+    {
+      "input": "92bf",
+      "expectedType": "TEXT",
+      "expectedText": "»",
+      "isExtended": true,
+      "description": "Extended char: »"
+    },
+    {
+      "input": "1320",
+      "expectedType": "TEXT",
+      "expectedText": "Ã",
+      "isExtended": true,
+      "description": "Extended char: Ã"
+    },
+    {
+      "input": "13a1",
+      "expectedType": "TEXT",
+      "expectedText": "ã",
+      "isExtended": true,
+      "description": "Extended char: ã"
+    },
+    {
+      "input": "13a2",
+      "expectedType": "TEXT",
+      "expectedText": "Í",
+      "isExtended": true,
+      "description": "Extended char: Í"
+    },
+    {
+      "input": "1323",
+      "expectedType": "TEXT",
+      "expectedText": "Ì",
+      "isExtended": true,
+      "description": "Extended char: Ì"
+    },
+    {
+      "input": "13a4",
+      "expectedType": "TEXT",
+      "expectedText": "ì",
+      "isExtended": true,
+      "description": "Extended char: ì"
+    },
+    {
+      "input": "1325",
+      "expectedType": "TEXT",
+      "expectedText": "Ò",
+      "isExtended": true,
+      "description": "Extended char: Ò"
+    },
+    {
+      "input": "1326",
+      "expectedType": "TEXT",
+      "expectedText": "ò",
+      "isExtended": true,
+      "description": "Extended char: ò"
+    },
+    {
+      "input": "13a7",
+      "expectedType": "TEXT",
+      "expectedText": "Õ",
+      "isExtended": true,
+      "description": "Extended char: Õ"
+    },
+    {
+      "input": "13a8",
+      "expectedType": "TEXT",
+      "expectedText": "õ",
+      "isExtended": true,
+      "description": "Extended char: õ"
+    },
+    {
+      "input": "1329",
+      "expectedType": "TEXT",
+      "expectedText": "{",
+      "isExtended": true,
+      "description": "Extended char: {"
+    },
+    {
+      "input": "132a",
+      "expectedType": "TEXT",
+      "expectedText": "}",
+      "isExtended": true,
+      "description": "Extended char: }"
+    },
+    {
+      "input": "13ab",
+      "expectedType": "TEXT",
+      "expectedText": "\\",
+      "isExtended": true,
+      "description": "Extended char: \\"
+    },
+    {
+      "input": "132c",
+      "expectedType": "TEXT",
+      "expectedText": "^",
+      "isExtended": true,
+      "description": "Extended char: ^"
+    },
+    {
+      "input": "13ad",
+      "expectedType": "TEXT",
+      "expectedText": "_",
+      "isExtended": true,
+      "description": "Extended char: _"
+    },
+    {
+      "input": "13ae",
+      "expectedType": "TEXT",
+      "expectedText": "¦",
+      "isExtended": true,
+      "description": "Extended char: ¦"
+    },
+    {
+      "input": "132f",
+      "expectedType": "TEXT",
+      "expectedText": "~",
+      "isExtended": true,
+      "description": "Extended char: ~"
+    },
+    {
+      "input": "13b0",
+      "expectedType": "TEXT",
+      "expectedText": "Ä",
+      "isExtended": true,
+      "description": "Extended char: Ä"
+    },
+    {
+      "input": "1331",
+      "expectedType": "TEXT",
+      "expectedText": "ä",
+      "isExtended": true,
+      "description": "Extended char: ä"
+    },
+    {
+      "input": "1332",
+      "expectedType": "TEXT",
+      "expectedText": "Ö",
+      "isExtended": true,
+      "description": "Extended char: Ö"
+    },
+    {
+      "input": "13b3",
+      "expectedType": "TEXT",
+      "expectedText": "ö",
+      "isExtended": true,
+      "description": "Extended char: ö"
+    },
+    {
+      "input": "1334",
+      "expectedType": "TEXT",
+      "expectedText": "ß",
+      "isExtended": true,
+      "description": "Extended char: ß"
+    },
+    {
+      "input": "13b5",
+      "expectedType": "TEXT",
+      "expectedText": "¥",
+      "isExtended": true,
+      "description": "Extended char: ¥"
+    },
+    {
+      "input": "13b6",
+      "expectedType": "TEXT",
+      "expectedText": "¤",
+      "isExtended": true,
+      "description": "Extended char: ¤"
+    },
+    {
+      "input": "1337",
+      "expectedType": "TEXT",
+      "expectedText": "|",
+      "isExtended": true,
+      "description": "Extended char: |"
+    },
+    {
+      "input": "1338",
+      "expectedType": "TEXT",
+      "expectedText": "Å",
+      "isExtended": true,
+      "description": "Extended char: Å"
+    },
+    {
+      "input": "13b9",
+      "expectedType": "TEXT",
+      "expectedText": "å",
+      "isExtended": true,
+      "description": "Extended char: å"
+    },
+    {
+      "input": "13ba",
+      "expectedType": "TEXT",
+      "expectedText": "Ø",
+      "isExtended": true,
+      "description": "Extended char: Ø"
+    },
+    {
+      "input": "133b",
+      "expectedType": "TEXT",
+      "expectedText": "ø",
+      "isExtended": true,
+      "description": "Extended char: ø"
+    },
+    {
+      "input": "13bc",
+      "expectedType": "TEXT",
+      "expectedText": "┌",
+      "isExtended": true,
+      "description": "Extended char: ┌"
+    },
+    {
+      "input": "133d",
+      "expectedType": "TEXT",
+      "expectedText": "┐",
+      "isExtended": true,
+      "description": "Extended char: ┐"
+    },
+    {
+      "input": "133e",
+      "expectedType": "TEXT",
+      "expectedText": "└",
+      "isExtended": true,
+      "description": "Extended char: └"
+    },
+    {
+      "input": "13bf",
+      "expectedType": "TEXT",
+      "expectedText": "┘",
+      "isExtended": true,
+      "description": "Extended char: ┘"
+    }
+  ],
+  "special_characters": [
+    {
+      "input": "91b0",
+      "expectedType": "TEXT",
+      "expectedText": "®",
+      "isExtended": false,
+      "description": "Special char: ®"
+    },
+    {
+      "input": "9131",
+      "expectedType": "TEXT",
+      "expectedText": "°",
+      "isExtended": false,
+      "description": "Special char: °"
+    },
+    {
+      "input": "9132",
+      "expectedType": "TEXT",
+      "expectedText": "½",
+      "isExtended": false,
+      "description": "Special char: ½"
+    },
+    {
+      "input": "91b3",
+      "expectedType": "TEXT",
+      "expectedText": "¿",
+      "isExtended": false,
+      "description": "Special char: ¿"
+    },
+    {
+      "input": "9134",
+      "expectedType": "TEXT",
+      "expectedText": "™",
+      "isExtended": false,
+      "description": "Special char: ™"
+    },
+    {
+      "input": "91b5",
+      "expectedType": "TEXT",
+      "expectedText": "¢",
+      "isExtended": false,
+      "description": "Special char: ¢"
+    },
+    {
+      "input": "91b6",
+      "expectedType": "TEXT",
+      "expectedText": "£",
+      "isExtended": false,
+      "description": "Special char: £"
+    },
+    {
+      "input": "9137",
+      "expectedType": "TEXT",
+      "expectedText": "♪",
+      "isExtended": false,
+      "description": "Special char: ♪"
+    },
+    {
+      "input": "9138",
+      "expectedType": "TEXT",
+      "expectedText": "à",
+      "isExtended": false,
+      "description": "Special char: à"
+    },
+    {
+      "input": "91b9",
+      "expectedType": "TEXT",
+      "expectedText": " ",
+      "isExtended": false,
+      "description": "Special char:  "
+    },
+    {
+      "input": "91ba",
+      "expectedType": "TEXT",
+      "expectedText": "è",
+      "isExtended": false,
+      "description": "Special char: è"
+    },
+    {
+      "input": "913b",
+      "expectedType": "TEXT",
+      "expectedText": "â",
+      "isExtended": false,
+      "description": "Special char: â"
+    },
+    {
+      "input": "91bc",
+      "expectedType": "TEXT",
+      "expectedText": "ê",
+      "isExtended": false,
+      "description": "Special char: ê"
+    },
+    {
+      "input": "913d",
+      "expectedType": "TEXT",
+      "expectedText": "î",
+      "isExtended": false,
+      "description": "Special char: î"
+    },
+    {
+      "input": "913e",
+      "expectedType": "TEXT",
+      "expectedText": "ô",
+      "isExtended": false,
+      "description": "Special char: ô"
+    },
+    {
+      "input": "91bf",
+      "expectedType": "TEXT",
+      "expectedText": "û",
+      "isExtended": false,
+      "description": "Special char: û"
+    }
+  ],
+  "pac_tests": [
+    {
+      "input": "9470",
+      "expectedType": "PAC",
+      "expectedRow": 14,
+      "expectedCol": 0,
+      "expectedColor": "White",
+      "description": "Row 14, col 0"
+    },
+    {
+      "input": "94d0",
+      "expectedType": "PAC",
+      "expectedRow": 13,
+      "expectedCol": 0,
+      "expectedColor": "White",
+      "description": "Row 13, col 0"
+    },
+    {
+      "input": "94f4",
+      "expectedType": "PAC",
+      "expectedRow": 14,
+      "expectedCol": 8,
+      "expectedColor": "White",
+      "description": "Row 14, col 8"
+    }
+  ],
+  "midrow_tests": [
+    {
+      "input": "91ae",
+      "expectedType": "MIDROW",
+      "expectedColor": "Italics",
+      "description": "Midrow Italics"
+    },
+    {
+      "input": "91a0",
+      "expectedType": "ERROR",
+      "expectedColor": null,
+      "description": "Even parity - rejected"
+    }
+  ],
+  "control_codes_not_text": [
+    {
+      "input": "9420",
+      "expectedType": "CONTROL",
+      "description": "RCL must not decode as TEXT"
+    },
+    {
+      "input": "942f",
+      "expectedType": "CONTROL",
+      "description": "EOC must not decode as TEXT"
+    },
+    {
+      "input": "942c",
+      "expectedType": "CONTROL",
+      "description": "EDM must not decode as TEXT"
+    },
+    {
+      "input": "9470",
+      "expectedType": "PAC",
+      "description": "PAC must not decode as TEXT"
+    }
+  ],
+  "line_decode_tests": [
+    {
+      "line": "9420 c1c2",
+      "expectedContains": "AB",
+      "description": "Simple text"
+    },
+    {
+      "line": "9420 e980 92a7",
+      "expectedContains": "¡",
+      "description": "Special character"
+    },
+    {
+      "line": "9420 9137 9137",
+      "expectedContains": "♪",
+      "description": "Music note"
+    },
+    {
+      "line": "c1c2 c4c4",
+      "expectedContains": "ABDD",
+      "description": "Full line text decode"
+    }
+  ],
+  "pair_detection": [
+    {
+      "line": "9420 9420",
+      "expectedPaired": [
+        true,
+        true
+      ]
+    },
+    {
+      "line": "9470 9470 9470",
+      "expectedPaired": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "line": "c1c2 c1c2",
+      "expectedPaired": [
+        false,
+        false
+      ]
+    }
+  ],
+  "hex_pattern": [
+    {
+      "input": "00:00:01:00 9140 4142 4344",
+      "expectedMatchCount": 3
+    }
+  ],
+  "pairing_command_tests": [
+    {
+      "input": "9140",
+      "isPairingCommand": true,
+      "description": "PAC is pairing command"
+    },
+    {
+      "input": "c1c2",
+      "isPairingCommand": false,
+      "description": "Text is not pairing command"
+    }
+  ],
+  "decode_single_code_tests": [
+    {
+      "input": "8080",
+      "expectedContains": "Null",
+      "description": "Null code"
+    },
+    {
+      "input": "c1c2",
+      "expectedContains": "AB",
+      "description": "Text AB"
+    }
+  ],
+  "iterator_tests": [
+    {
+      "line": "9420 9420 c1c2 9470 9470",
+      "expectedWordCount": 5,
+      "expectedPairing": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "description": "Iterator with pairing"
+    }
+  ]
+}

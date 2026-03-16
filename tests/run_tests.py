@@ -30,7 +30,6 @@ if __name__ == "__main__":
     tests = [
         "test_all.py",
         "test_buffer.py",
-        "test_control_commands.py",
         "test_overflow.py",
     ]
 
